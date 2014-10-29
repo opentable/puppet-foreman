@@ -1,6 +1,6 @@
 require 'uri'
 
-Puppet::Type.newtype(:foreman_os) do
+Puppet::Type.newtype(:foreman_operatingsystem) do
 
   ensurable
 
@@ -38,22 +38,12 @@ Puppet::Type.newtype(:foreman_os) do
   newproperty(:major_version) do
     desc ''
     isrequired
-    munge do |value|
-      Integer(value)
-    end
     newvalues(/^\d{1,2}$/)
   end
 
   newproperty(:minor_version) do
     desc ''
     defaultto ''
-    munge do |value|
-      if !value.eql?('')
-        Integer(value)
-      else
-        value
-      end
-    end
   end
 
   newproperty(:description) do
@@ -62,10 +52,10 @@ Puppet::Type.newtype(:foreman_os) do
     newvalues(/^.{0,255}$/)
   end
 
-  newproperty(:osfamily) do
+  newparam(:osfamily) do
     desc ''
     defaultto ''
-    newvalues('','AIX','Arch Linux', 'Debian', 'Free BSD', 'Gentoo', 'Junos', 'Red Hat', 'Solaris', 'SUSE', 'Windows')
+    newvalues('','AIX','Arch Linux', 'Debian', 'Free BSD', 'Gentoo', 'Junos', 'Redhat', 'Solaris', 'SUSE', 'Windows')
   end
 
   newproperty(:release_name) do
