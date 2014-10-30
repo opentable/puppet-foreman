@@ -49,4 +49,9 @@ Puppet::Type.newtype(:foreman_config_template) do
     newvalues('', 'PXELinux','PXEGrub','iPXE','provision','finish','script','user_data','ZTP')
     defaultto ''
   end
+
+  newproperty(:operatingsystems) do
+    desc ''
+    defaultto ''
+  end
 end

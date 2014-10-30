@@ -43,7 +43,17 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
       { :id => 7, :name => 'user_data'},
       { :id => 8, :name => 'ZTP'}
     ]
-    template = templates.find { |t| t[:name] == name.to_s }[:id]
+    templates.find { |t| t[:name] == name.to_s }[:id]
+  end
+
+  def operatingsystem(name)
+    os = PuppetX::TheForeman::Resources::OperatingSystems.new(resource).read
+    os_result = os['results'].find { |s| s['name'] == resource[:name] }
+    if os_result
+      operatingsystem = os.read(os_result['id'])
+    else
+      operatingsystem = os
+    end
   end
 
   def id
@@ -60,7 +70,8 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
       'template'           => resource[:template],
       'snippet'            => resource[:snippet],
       'template_kind_id'   => template_id(resource[:type]),
-      'template_kind_name' => resource[:type]
+      'template_kind_name' => resource[:type],
+      'operatingsystems'   => operatingsystem(resource[:operatingsystems])
     }
 
     config_templates.create(config_hash)
@@ -101,5 +112,13 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
 
   def type=(value)
     config_templates.update(id, { :template_kind_id => template_id(value), :template_kind_name => value })
+  end
+
+  def operatingsystems
+    config_template ? config_template['operatingsystems'] : nil
+  end
+
+  def operatingsystems=(value)
+    config_templates.update(id, { :operatingsystems => operatingsystem(value) })
   end
 end
