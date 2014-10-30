@@ -113,11 +113,11 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
   end
 
   def name
-    #operatingsystem ? operatingsystem['name'] : nil
+    operatingsystem ? operatingsystem['name'] : nil
   end
 
   def name=(value)
-    #operatingsystems.update({'id' => id, 'operating_system' => {'name' => value}})
+    operatingsystems.update(id, { :name => value })
   end
 
   def release_name

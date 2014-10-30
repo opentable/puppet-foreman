@@ -55,6 +55,7 @@ Puppet::Type.newtype(:foreman_operatingsystem) do
   newparam(:osfamily) do
     desc ''
     defaultto ''
+    #TODO: these need to be tested/updated
     newvalues('','AIX','Arch Linux', 'Debian', 'Free BSD', 'Gentoo', 'Junos', 'Redhat', 'Solaris', 'SUSE', 'Windows')
   end
 
