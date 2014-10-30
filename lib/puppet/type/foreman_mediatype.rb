@@ -1,6 +1,6 @@
 require 'uri'
 
-Puppet::Type.newtype(:foreman_operatingsystem) do
+Puppet::Type.newtype(:foreman_mediatype) do
 
   ensurable
 
@@ -34,50 +34,16 @@ Puppet::Type.newtype(:foreman_operatingsystem) do
     defaultto 'admin'
   end
 
-
-  newproperty(:major_version) do
-    desc ''
-    isrequired
-    newvalues(/^\d{1,2}$/)
-  end
-
-  newproperty(:minor_version) do
+  newproperty(:path) do
     desc ''
     defaultto ''
   end
 
-  newproperty(:description) do
-    desc ''
-    defaultto ''
-    newvalues(/^.{0,255}$/)
-  end
-
-  newparam(:osfamily) do
+  newproperty(:os_family) do
     desc ''
     defaultto ''
     #TODO: these need to be tested/updated
     newvalues('','AIX','Arch Linux', 'Debian', 'Free BSD', 'Gentoo', 'Junos', 'Redhat', 'Solaris', 'SUSE', 'Windows')
-  end
-
-  newproperty(:release_name) do
-    desc ''
-    defaultto ''
-    newvalues(/^.{0,255}$/)
-  end
-
-  newproperty(:architectures, :array_matching => :all) do
-    desc ''
-    defaultto []
-  end
-
-  newproperty(:media, :array_matching => :all) do
-    desc ''
-    defaultto []
-  end
-
-  newproperty(:ptables, :array_matching => :all) do
-    desc ''
-    defaultto []
   end
 
 end

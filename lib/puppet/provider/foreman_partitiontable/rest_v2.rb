@@ -55,12 +55,19 @@ Puppet::Type.type(:foreman_partitiontable).provide(:rest) do
     @ptable = nil
   end
 
-
   def layout
     partition_table ? partition_table['layout'] : nil
   end
 
   def layout=(value)
     partition_tables.update(id, { :layout => value })
+  end
+
+  def os_family
+    partition_table ? partition_table['os_family'] : nil
+  end
+
+  def os_family=(value)
+    partition_tables.update(id, { :os_family => value })
   end
 end

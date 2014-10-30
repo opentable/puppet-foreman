@@ -39,7 +39,7 @@ Puppet::Type.newtype(:foreman_partitiontable) do
     defaultto ''
   end
 
-  newparam(:os_family) do
+  newproperty(:os_family) do
     desc ''
     defaultto ''
     #TODO: these need to be tested/updated
