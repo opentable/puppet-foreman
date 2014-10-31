@@ -70,4 +70,14 @@ Puppet::Type.newtype(:foreman_operatingsystem) do
     defaultto []
   end
 
+  newproperty(:media, :array_matching => :all) do
+    desc ''
+    defaultto []
+  end
+
+  newproperty(:ptables, :array_matching => :all) do
+    desc ''
+    defaultto []
+  end
+
 end

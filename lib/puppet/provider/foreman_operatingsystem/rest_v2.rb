@@ -31,7 +31,7 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
     end
   end
 
-  def architecture(names)
+  def architecture_lookup(names)
     architectures = []
     archs = PuppetX::TheForeman::Resources::Architectures.new(resource).read
     archs['results'].each do |result|
@@ -42,6 +42,32 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
       end
     end
     return architectures
+  end
+
+  def media_lookup(names)
+    mediatypes = []
+    media = PuppetX::TheForeman::Resources::MediaTypes.new(resource).read
+    media['results'].each do |result|
+      names.each do |name|
+        if result['name'].eql?(name)
+          mediatypes.push(result)
+        end
+      end
+    end
+    return mediatypes
+  end
+
+  def ptable_lookup(names)
+    ptables = []
+    ptable = PuppetX::TheForeman::Resources::PartitionTables.new(resource).read
+    ptable['results'].each do |result|
+      names.each do |name|
+        if result['name'].eql?(name)
+          ptables.push(result)
+        end
+      end
+    end
+    return ptables
   end
 
   def id
@@ -61,7 +87,9 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
       'release_name'  => resource[:release_name]
     }
 
-    os_hash['architectures'] = architecture(resource[:architectures]) if !resource[:architectures].empty?
+    os_hash['architectures'] = architecture_lookup(resource[:architectures]) if !resource[:architectures].empty?
+    os_hash['media']         = media_lookup(resource[:media]) if !resource[:media].empty?
+    os_hash['ptables']       = ptable_lookup(resource[:ptables]) if !resource[:ptables].empty?
     os_hash['family']        = resource[:osfamily] if !resource[:osfamily]
 
     operatingsystems.create(os_hash)
@@ -85,7 +113,39 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
   end
 
   def architectures=(value)
-    operatingsystems.update(id, { :architectures => architecture(value) })
+    operatingsystems.update(id, { :architectures => architecture_lookup(value) })
+  end
+
+  def media
+    if operatingsystem
+      mediatypes = []
+      operatingsystem['media'].each do |n|
+        mediatypes.push(n['name'])
+      end
+      mediatypes
+    else
+      nil
+    end
+  end
+
+  def media=(value)
+    operatingsystems.update(id, { :media => media_lookup(value) })
+  end
+
+  def ptables
+    if operatingsystem
+      ptables = []
+      operatingsystem['ptables'].each do |n|
+        ptables.push(n['name'])
+      end
+      ptables
+    else
+      nil
+    end
+  end
+
+  def ptables=(value)
+    operatingsystems.update(id, { :ptables => ptable_lookup(value) })
   end
 
   def name
