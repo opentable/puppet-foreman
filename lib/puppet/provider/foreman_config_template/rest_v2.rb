@@ -4,6 +4,7 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
     begin
       require 'oauth'
       require 'json'
+      require 'puppet_x/theforeman/operatingsystem'
       require 'puppet_x/theforeman/config_template'
       true
     rescue LoadError
@@ -16,19 +17,22 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
   end
 
   def config_template
-    if @config
-      @config
-    else
-      config = config_templates.read
-      config['results'].each do |s|
-        if s['name'] == resource[:name]
-          @config = config_templates.read(s['id'])
-          break
-        else
-          @config = nil
-        end
+    config = config_templates.read
+    Puppet.debug("Initial config: #{config}")
+    config['results'].each do |s|
+      Puppet.debug("Result is #{s}")
+      Puppet.debug("name is #{s['name']}")
+      Puppet.debug("resource is #{resource[:name]}")
+      if s['name'] == resource[:name]
+        Puppet.debug("WINNING")
+        Puppet.debug("id is #{s['id']}")
+        @config = config_templates.read(s['id'])
+        break
+      else
+        @config = nil
       end
     end
+    Puppet.debug("Found config: #{@config}")
     @config
   end
 
@@ -46,17 +50,40 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
     templates.find { |t| t[:name] == name.to_s }[:id]
   end
 
-  def operatingsystem(name)
-    os = PuppetX::TheForeman::Resources::OperatingSystems.new(resource).read
-    os_result = os['results'].find { |s| s['name'] == resource[:name] }
-    if os_result
-      operatingsystem = os.read(os_result['id'])
-    else
-      operatingsystem = os
+  def operatingsystem_lookup(names) #TODO: rename names to descriptions
+    operatingsystems = PuppetX::TheForeman::Resources::OperatingSystems.new(resource)
+    os = operatingsystems.read
+    os_names = []
+    names.each do |name|
+      os_name = os['results'].find { |s| s['description'] == name }
+      os_names.push(os_name)
     end
+    return os_names
+  end
+
+  def os_lookup_by_id(id)
+    operatingsystems = PuppetX::TheForeman::Resources::OperatingSystems.new(resource)
+    os = operatingsystems.read
+    os_name = os['results'].find { |s| s['id'] == id }
+  end
+
+  def os_descriptions(os_array)
+    names = []
+    unless os_array.nil?
+      os_array.each do |h|
+        os_object = os_lookup_by_id(h['id'])
+        Puppet.debug("os_object is: #{os_object}")
+        unless os_object.nil?
+          names.push(os_object['description'])
+        end
+      end
+    end
+    return names
   end
 
   def id
+    Puppet.debug("looking for id")
+    Puppet.debug("found config: #{config_template}")
     config_template ? config_template['id'] : nil
   end
 
@@ -71,7 +98,7 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
       'snippet'            => resource[:snippet],
       'template_kind_id'   => template_id(resource[:type]),
       'template_kind_name' => resource[:type],
-      'operatingsystems'   => operatingsystem(resource[:operatingsystems])
+      'operatingsystems'   => operatingsystem_lookup(resource[:operatingsystems])
     }
 
     config_templates.create(config_hash)
@@ -79,7 +106,7 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
 
   def destroy
     config_templates.delete(id)
-    @arch = nil
+    @config = nil
   end
 
   def name
@@ -115,10 +142,13 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
   end
 
   def operatingsystems
-    config_template ? config_template['operatingsystems'] : nil
+    fu = config_template['operatingsystems']
+    Puppet.debug("LBENNETT: #{fu}")
+    Puppet.debug("LBENNETT: #{fu.class}")
+    config_template ? os_descriptions(config_template['operatingsystems']) : nil
   end
 
   def operatingsystems=(value)
-    config_templates.update(id, { :operatingsystems => operatingsystem(value) })
+    config_templates.update(id, { :operatingsystems => operatingsystem_lookup(value) })
   end
 end

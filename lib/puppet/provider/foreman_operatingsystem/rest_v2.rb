@@ -22,7 +22,7 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
       @os
     else
       os = operatingsystems.read
-      os_result = os['results'].find { |s| s['name'] == resource[:name] }
+      os_result = os['results'].find { |s| s['description'] == resource[:name] }
       if os_result
         @os = operatingsystems.read(os_result['id'])
       else
@@ -54,10 +54,10 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
 
   def create
     os_hash = {
-      'description'   => resource[:description],
+      'description'   => resource[:name],
       'major'         => resource[:major_version],
       'minor'         => resource[:minor_version],
-      'name'          => resource[:name],
+      'name'          => resource[:osname],
       'release_name'  => resource[:release_name]
     }
 
@@ -85,15 +85,19 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
   end
 
   def architectures=(value)
-    operatingsystems.update(id, { 'name' => resource[:name], :architectures => architecture(value) })
+    operatingsystems.update(id, { :architectures => architecture(value) })
   end
 
-  def description
+  def name
     operatingsystem ? operatingsystem['description'] : nil
   end
 
-  def description=(value)
-    operatingsystems.update(id, { :description => value })
+  def osname
+    operatingsystem ? operatingsystem['name'] : nil
+  end
+
+  def osname=(value)
+    operatingsystems.update(id, { :name => value })
   end
 
   def major_version
@@ -110,14 +114,6 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
 
   def minor_version=(value)
     operatingsystems.update(id, { :minor => value })
-  end
-
-  def name
-    operatingsystem ? operatingsystem['name'] : nil
-  end
-
-  def name=(value)
-    operatingsystems.update(id, { :name => value })
   end
 
   def release_name

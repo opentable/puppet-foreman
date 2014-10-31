@@ -50,7 +50,7 @@ Puppet::Type.newtype(:foreman_config_template) do
     defaultto ''
   end
 
-  newproperty(:operatingsystems) do
+  newproperty(:operatingsystems, :array_matching => :all) do
     desc ''
     defaultto ''
   end

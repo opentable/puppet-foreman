@@ -4,10 +4,6 @@ Puppet::Type.newtype(:foreman_operatingsystem) do
 
   ensurable
 
-  newparam(:name, :namevar => true) do
-    desc ''
-  end
-
   newparam(:base_url) do
     desc ''
     defaultto 'http://localhost'
@@ -34,6 +30,16 @@ Puppet::Type.newtype(:foreman_operatingsystem) do
     defaultto 'admin'
   end
 
+  newparam(:name, :namevar => true) do
+    desc ''
+    defaultto ''
+  end
+
+  newproperty(:osname) do
+    desc ''
+    defaultto ''
+    newvalues(/^.{0,255}$/)
+  end
 
   newproperty(:major_version) do
     desc ''
@@ -44,12 +50,6 @@ Puppet::Type.newtype(:foreman_operatingsystem) do
   newproperty(:minor_version) do
     desc ''
     defaultto ''
-  end
-
-  newproperty(:description) do
-    desc ''
-    defaultto ''
-    newvalues(/^.{0,255}$/)
   end
 
   newparam(:osfamily) do
