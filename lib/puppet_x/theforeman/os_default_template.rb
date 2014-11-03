@@ -18,8 +18,6 @@ module Resources
     end
 
     def read(os_id, id=nil)
-      Puppet.debug("reading with #{os_id} and #{id}")
-
       if id
         template = consumer.request(:get, "#{resource[:base_url]}/api/v2/operatingsystems/#{os_id}/os_default_templates/#{id}", token, {})
       else
