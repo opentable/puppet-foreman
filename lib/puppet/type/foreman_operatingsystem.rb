@@ -80,4 +80,9 @@ Puppet::Type.newtype(:foreman_operatingsystem) do
     defaultto []
   end
 
+  newproperty(:os_default_templates, :array_matching => :all) do
+    desc ''
+    defaultto []
+  end
+
 end

@@ -7,6 +7,7 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
       require 'json'
       require 'puppet_x/theforeman/operatingsystem'
       require 'puppet_x/theforeman/architecture'
+      require 'puppet_x/theforeman/os_default_template'
       true
     rescue LoadError
       false
@@ -68,6 +69,87 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
       end
     end
     return ptables
+  end
+
+  def os_templates_id(name)
+    od_id = nil
+    os_template = PuppetX::TheForeman::Resources::ConfigTemplates.new(resource).read
+    os_template['results'].each do |result|
+      if result['name'].eql?(name)
+        os_id = result['id']
+      end
+    end
+    return od_id
+  end
+
+  def os_default_templates_lookup(names, again=0)
+    os_templates = []
+    os_id = operatingsystem['id']
+    os_template = PuppetX::TheForeman::Resources::OSDefaultTemplates.new(resource).read(os_id)
+    os_template['results'].each do |result|
+      names.each do |name|
+        if result['config_template_name'].eql?(name)
+          os_templates.push(result)
+        end
+      end
+    end
+    if os_templates.empty?
+      if again < 1
+        os_template_update(names)
+        os_templates = os_default_templates_lookup(names, again+1)
+      end
+    end
+    return os_templates
+  end
+
+  def os_templates_lookup(names)
+    os_templates = []
+    os_template = PuppetX::TheForeman::Resources::ConfigTemplates.new(resource).read
+    os_template['results'].each do |result|
+      names.each do |name|
+        if result['name'].eql?(name)
+          os_templates.push(result)
+          break
+        end
+      end
+    end
+    return os_templates
+  end
+
+  def os_template_update(names)
+    os_id = operatingsystem['id']
+    os_template = PuppetX::TheForeman::Resources::OSDefaultTemplates.new(resource)
+
+    names.each do |name|
+      config_template = os_templates_lookup(name)[0]
+      default_template_hash = {
+        'operatingsystem_id'  => os_id,
+        'os_default_template' => {
+          'config_template_id' => config_template['id'],
+          'template_kind_id'   => config_template['template_kind_id']
+        }
+      }
+      os_template.create(os_id, default_template_hash)
+    end
+  end
+
+  def os_attributes_lookup(names)
+    os_templates = []
+    os_template = PuppetX::TheForeman::Resources::ConfigTemplates.new(resource).read
+    os_template['results'].each do |result|
+      names.each do |name|
+        if result['name'].eql?(name)
+          attributes_hash = {
+           '0' => {
+             'template_kind_id'   => result['template_kind_id'],
+             'config_template_id' => result['id']
+           }
+          }
+          os_templates.push(attributes_hash)
+        end
+      end
+    end
+    return os_templates
   end
 
   def id
@@ -146,6 +228,23 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
 
   def ptables=(value)
     operatingsystems.update(id, { :ptables => ptable_lookup(value) })
+  end
+
+  def os_default_templates
+    if operatingsystem
+      config_templates = []
+      operatingsystem['os_default_templates'].each do |n|
+        config_templates.push(n['config_template_name'])
+      end
+      config_templates
+    else
+      nil
+    end
+  end
+
+  def os_default_templates=(value)
+    operatingsystems.update(id, { :os_default_templates => os_default_templates_lookup(value) })
+    operatingsystems.update(id, { :os_default_templates_attributes => os_attributes_lookup(value) })
   end
 
   def name

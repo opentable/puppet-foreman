@@ -18,21 +18,14 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
 
   def config_template
     config = config_templates.read
-    Puppet.debug("Initial config: #{config}")
     config['results'].each do |s|
-      Puppet.debug("Result is #{s}")
-      Puppet.debug("name is #{s['name']}")
-      Puppet.debug("resource is #{resource[:name]}")
       if s['name'] == resource[:name]
-        Puppet.debug("WINNING")
-        Puppet.debug("id is #{s['id']}")
         @config = config_templates.read(s['id'])
         break
       else
         @config = nil
       end
     end
-    Puppet.debug("Found config: #{@config}")
     @config
   end
 
@@ -72,18 +65,15 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
     unless os_array.nil?
       os_array.each do |h|
         os_object = os_lookup_by_id(h['id'])
-        Puppet.debug("os_object is: #{os_object}")
         unless os_object.nil?
           names.push(os_object['description'])
         end
       end
     end
-    return names
+    return names.sort!
   end
 
   def id
-    Puppet.debug("looking for id")
-    Puppet.debug("found config: #{config_template}")
     config_template ? config_template['id'] : nil
   end
 
@@ -142,13 +132,10 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
   end
 
   def operatingsystems
-    fu = config_template['operatingsystems']
-    Puppet.debug("LBENNETT: #{fu}")
-    Puppet.debug("LBENNETT: #{fu.class}")
     config_template ? os_descriptions(config_template['operatingsystems']) : nil
   end
 
   def operatingsystems=(value)
-    config_templates.update(id, { :operatingsystems => operatingsystem_lookup(value) })
+    config_templates.update(id, { :operatingsystems => operatingsystem_lookup(value.sort!) })
   end
 end
