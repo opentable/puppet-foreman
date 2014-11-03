@@ -1,69 +1,57 @@
-Puppet::Type.type(:foreman_smartproxy).provide(:rest_v2) do
+Puppet::Type.type(:foreman_smartproxy).provide(:rest) do
 
-  confine :feature => :apipie_bindings
-
-  # when both rest and rest_v2 providers are installed, use this one
-  def self.specificity
-    super + 1
+  confine :true => begin
+    begin
+      require 'oauth'
+      require 'json'
+      require 'puppet_x/theforeman/smartproxy'
+      true
+    rescue LoadError
+      false
+    end
   end
 
-  def api
-    @api ||= ApipieBindings::API.new({
-      :uri => resource[:base_url],
-      :api_version => 2,
-      :oauth => {
-        :consumer_key    => resource[:consumer_key],
-        :consumer_secret => resource[:consumer_secret]
-      },
-      :timeout => resource[:timeout],
-      :headers => {
-        :foreman_user => resource[:effective_user],
-      },
-      :apidoc_cache_base_dir => File.join(Puppet[:vardir], 'apipie_bindings')
-    }).resource(:smart_proxies)
+  def smartproxies
+    PuppetX::TheForeman::Resources::SmartProxy.new(resource)
   end
 
-  # proxy hash or nil
-  def proxy
+  def smartproxy
     if @proxy
       @proxy
     else
-      @proxy = api.call(:index, :search => "name=#{resource[:name]}")['results'][0]
+      proxy = smartproxies.read
+      @proxy = proxy['results'].find { |s| s['name'] == resource[:name] }
     end
   end
 
   def id
-    proxy ? proxy['id'] : nil
+    smartproxy ? smartproxy['id'] : nil
   end
 
   def exists?
-    ! id.nil?
+    id != nil
   end
 
   def create
-    api.call(:create, {
-      :smart_proxy => {
-        :name => resource[:name],
-        :url  => resource[:url]
-      }
-    })
+    proxy_hash = {
+      'name' => resource[:name],
+      'url'  => resource[:url]
+    }
+
+    smartproxies.create(proxy_hash)
   end
 
   def destroy
-    api.call(:destroy, :id => id)
+    smartproxies.delete(id)
     @proxy = nil
   end
 
   def url
-    proxy ? proxy['url'] : nil
+    smartproxy ? smartproxy['url'] : nil
   end
 
   def url=(value)
-    api.call(:update, { :id => id, :smart_proxy => { :url => value } })
-  end
-
-  def refresh_features!
-    api.call(:refresh, :id => id)
+    smartproxies.update(id, { :url => value })
   end
 
 end
