@@ -12,8 +12,8 @@ module Resources
     attr_reader :headers
     attr_reader :token
 
-    def initialize(resource)
-      settings = YAML.load_file('/etc/foreman/settings.yaml')
+    def initialize(resource, settings='/etc/foreman/settings.yaml')
+      settings = YAML.load_file(settings)
       @resource = resource
 
       if @resource[:consumer_key].eql?('')
