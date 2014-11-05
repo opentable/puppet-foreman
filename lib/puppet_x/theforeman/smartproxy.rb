@@ -9,7 +9,7 @@ module Resources
   class SmartProxy < Resource
 
     def initialize(resource)
-      super(resource, '/etc/foreman-proxy/settings.yaml')
+      super(resource)
     end
 
     def create(proxy_hash)
