@@ -20,10 +20,6 @@ Puppet::Type.type(:foreman_smartproxy).provide(:rest) do
       @proxy
     else
       proxy = smartproxies.read
-      Puppet.debug("LBENNETT: ")
-      Puppet.debug(proxy)
-      Puppet.debug(proxy['results'])
-      Puppet.debug("LBENNETT:")
       @proxy = proxy['results'].find { |s| s['name'] == resource[:name] }
     end
   end
