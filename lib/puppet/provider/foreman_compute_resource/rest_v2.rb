@@ -45,7 +45,6 @@ Puppet::Type.type(:foreman_compute_resource).provide(:rest) do
     when /EC2/i
       compute_hash['region'] = resource[:region]
     when /Vmware/i
-      Puppet.debug("Creating with datacenter: #{resource[:datacenter]}")
       compute_hash['datacenter'] = resource[:datacenter]
       compute_hash['server'] = resource[:server]
     else
@@ -97,7 +96,6 @@ Puppet::Type.type(:foreman_compute_resource).provide(:rest) do
   end
 
   def datacenter=(value)
-    Puppet.debug("Setting datacenter to: #{value}")
     compute_resources.update(id, { :datacenter => value })
   end
 
