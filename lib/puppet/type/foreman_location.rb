@@ -34,11 +34,6 @@ Puppet::Type.newtype(:foreman_location) do
     defaultto 'admin'
   end
 
-  newproperty(:users, :array_matching => :all) do
-    desc ''
-    defaultto []
-  end
-
   newproperty(:smart_proxies, :array_matching => :all) do
     desc ''
     defaultto []

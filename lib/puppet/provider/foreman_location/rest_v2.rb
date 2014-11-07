@@ -79,6 +79,24 @@ Puppet::Type.type(:foreman_location).provide(:rest) do
     return ids
   end
 
+  def lookup_by_id(crud_class, id)
+    resource = crud_class.read
+    resource_name = resource['results'].find { |s| s['id'] == id }
+  end
+
+  def lookup_names(crud_class, attribute_array)
+    names = []
+    unless attribute_array.nil?
+      attribute_array.each do |h|
+        attribute_object = lookup_by_id(crud_class, h['id'])
+        unless attribute_object.nil?
+          names.push(attribute_object['name'])
+        end
+      end
+    end
+    return names.sort!
+  end
+
   def id
     location ? location['id'] : nil
   end
@@ -102,71 +120,63 @@ Puppet::Type.type(:foreman_location).provide(:rest) do
   end
 
   def destroy
-    locations.delete(id)
+    locations_dao.delete(id)
     @location = nil
   end
 
-  def users
-
-  end
-
-  def users=(value)
-
-  end
-
   def smart_proxies
-
+    location ? lookup_names(smartproxies_dao, location['smart_proxies']) : nil
   end
 
   def smart_proxies=(value)
-    locations.update(id, location_hash(:smart_proxy_ids => smartproxy_lookup_ids(value)) )
+    locations_dao.update(id, location_hash(:smart_proxy_ids => lookup_ids(smartproxies_dao, value)))
   end
 
   def compute_resources
-
+    location ? lookup_names(compute_resource_dao, location['compute_resources']) : nil
   end
 
   def compute_resources=(value)
-
+    locations_dao.update(id, location_hash(:compute_resource_ids => lookup_ids(compute_resource_dao, value)))
   end
 
   def media
-
+    location ? lookup_names(media_dao, location['media']) : nil
   end
 
   def media=(value)
-
+    locations_dao.update(id, location_hash(:medium_ids => lookup_ids(media_dao, value)))
   end
 
   def config_templates
-
+    location ? lookup_names(config_template_dao, location['config_templates']) : nil
   end
 
   def config_templates=(value)
-
+    locations_dao.update(id, location_hash(:config_template_ids => lookup_ids(config_template_dao, value)))
   end
 
   def domains
-
+    location ? lookup_names(domain_dao, location['domains']) : nil
   end
 
   def domains=(value)
-
+    locations_dao.update(id, location_hash(:domain_ids => lookup_ids(domain_dao, value)))
   end
 
   def environments
-
+    location ? lookup_names(environment_dao, location['environments']) : nil
   end
 
   def environments=(value)
-
+    locations_dao.update(id, location_hash(:environment_ids => lookup_ids(environment_dao, value)))
   end
 
   def subnets
-
+    location ? lookup_names(subnet_dao, location['subnets']) : nil
   end
 
   def subnets=(value)
-
+    locations_dao.update(id, location_hash(:subnet_ids => lookup_ids(subnet_dao, value)))
   end
 end
