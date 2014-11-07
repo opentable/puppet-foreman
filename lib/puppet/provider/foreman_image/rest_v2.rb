@@ -15,8 +15,13 @@ Puppet::Type.type(:foreman_image).provide(:rest) do
   end
 
   def images
-    #TODO: fix the NilClass bug here
-    PuppetX::TheForeman::Resources::Images.new(resource, compute_resource_lookup(resource[:compute_resource])['id'])
+    compute_resource = compute_resource_lookup(resource[:compute_resource])
+    if compute_resource != nil
+      PuppetX::TheForeman::Resources::Images.new(resource, compute_resource['id'])
+    else
+      Puppet.err("Unable to find compute_resource #{resource[:compute_resource]}")
+      return nil
+    end
   end
 
   def compute_resources
@@ -35,8 +40,12 @@ Puppet::Type.type(:foreman_image).provide(:rest) do
     if @image
       @image
     else
-      image = images.read
-      @image = image['results'].find { |s| s['name'] == resource[:name] }
+      if images
+        image = images.read
+        @image = image['results'].find { |s| s['name'] == resource[:name] }
+      else
+        @image = {'id'=>'unknwon'}
+      end
     end
     @image
   end

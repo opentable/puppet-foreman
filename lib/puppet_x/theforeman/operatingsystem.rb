@@ -14,14 +14,14 @@ module Resources
 
     def create(os_hash)
       post_data = os_hash.to_json
-      consumer.request(:post, "#{resource[:base_url]}/api/v2/operatingsystems", token, {}, post_data, headers)
+      request(:post, "#{resource[:base_url]}/api/v2/operatingsystems", token, {}, post_data, headers)
     end
 
     def read(id=nil)
       if id
-        os = consumer.request(:get, "#{resource[:base_url]}/api/v2/operatingsystems/#{id}", token, {})
+        os = request(:get, "#{resource[:base_url]}/api/v2/operatingsystems/#{id}", token, {})
       else
-        os = consumer.request(:get, "#{resource[:base_url]}/api/v2/operatingsystems", token, {})
+        os = request(:get, "#{resource[:base_url]}/api/v2/operatingsystems", token, {})
       end
 
       JSON.parse(os.read_body)
@@ -29,11 +29,11 @@ module Resources
 
     def update(id, os_hash)
       post_data = os_hash.to_json
-      consumer.request(:put, "#{resource[:base_url]}/api/v2/operatingsystems/#{id}", token, {}, post_data, headers)
+      request(:put, "#{resource[:base_url]}/api/v2/operatingsystems/#{id}", token, {}, post_data, headers)
     end
 
     def delete(id)
-      os = consumer.request(:delete, "#{resource[:base_url]}/api/v2/operatingsystems/#{id}", token, {})
+      request(:delete, "#{resource[:base_url]}/api/v2/operatingsystems/#{id}", token, {})
     end
   end
 

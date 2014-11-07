@@ -14,16 +14,16 @@ module Resources
 
     def create(env_hash)
       post_data = env_hash.to_json
-      consumer.request(:post, "#{resource[:base_url]}/api/v2/environments", token, {}, post_data, headers)
+      request(:post, "#{resource[:base_url]}/api/v2/environments", token, {}, post_data, headers)
     end
 
     def read
-      env = consumer.request(:get, "#{resource[:base_url]}/api/v2/environments", token, {})
+      env = request(:get, "#{resource[:base_url]}/api/v2/environments", token, {})
       JSON.parse(env.read_body)
     end
 
     def delete(id)
-      env = consumer.request(:delete, "#{resource[:base_url]}/api/v2/environments/#{id}", token, {})
+      request(:delete, "#{resource[:base_url]}/api/v2/environments/#{id}", token, {})
     end
   end
 

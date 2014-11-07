@@ -12,6 +12,8 @@ module Resources
     attr_reader :headers
     attr_reader :token
 
+    MAX_ATTEMPTS = 10
+
     def initialize(resource)
       settings = YAML.load_file('/etc/foreman/settings.yaml')
       @resource = resource
@@ -42,6 +44,24 @@ module Resources
 
       @consumer = OAuth::Consumer.new(consumer_key, consumer_secret, oauth_options)
       @token = OAuth::AccessToken.new(@consumer)
+    end
+
+    def new_token
+      @token = OAuth::AccessToken.new(@consumer)
+    end
+
+    def request(method, uri, token, params, data=nil, headers=nil)
+      attempts = 0
+      begin
+        consumer.request(method, uri, token, params, data, headers)
+      rescue Exception => ex
+        Puppet.err(ex)
+        attempts = attempts + 1
+        if(attempts < MAX_ATTEMPTS)
+          new_token
+          retry
+        end
+      end
     end
   end
 

@@ -14,16 +14,16 @@ module Resources
 
     def create(proxy_hash)
       post_data = proxy_hash.to_json
-      consumer.request(:post, "#{resource[:base_url]}/api/v2/smart_proxies", token, {}, post_data, headers)
+      request(:post, "#{resource[:base_url]}/api/v2/smart_proxies", token, {}, post_data, headers)
     end
 
     def read
-      proxy = consumer.request(:get, "#{resource[:base_url]}/api/v2/smart_proxies", token, {})
+      proxy = request(:get, "#{resource[:base_url]}/api/v2/smart_proxies", token, {})
       JSON.parse(proxy.read_body)
     end
 
     def delete(id)
-      proxy = consumer.request(:delete, "#{resource[:base_url]}/api/v2/smart_proxies/#{id}", token, {})
+      request(:delete, "#{resource[:base_url]}/api/v2/smart_proxies/#{id}", token, {})
     end
   end
 

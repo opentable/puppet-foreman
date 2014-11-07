@@ -14,19 +14,19 @@ module Resources
 
     def create(arch_hash)
       post_data = arch_hash.to_json
-      consumer.request(:post, "#{resource[:base_url]}/api/v2/architectures", token, {}, post_data, headers)
+      request(:post, "#{resource[:base_url]}/api/v2/architectures", token, {}, post_data, headers)
     end
 
     def read
-      arch = consumer.request(:get, "#{resource[:base_url]}/api/v2/architectures", token, {})
+      arch = request(:get, "#{resource[:base_url]}/api/v2/architectures", token, {})
       JSON.parse(arch.read_body)
     end
 
     def delete(id)
-      arch = consumer.request(:delete, "#{resource[:base_url]}/api/v2/architectures/#{id}", token, {})
+      request(:delete, "#{resource[:base_url]}/api/v2/architectures/#{id}", token, {})
     end
   end
-  
+
 end
 end
 end

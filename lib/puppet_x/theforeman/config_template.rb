@@ -14,14 +14,14 @@ module Resources
 
     def create(config_hash)
       post_data = config_hash.to_json
-      consumer.request(:post, "#{resource[:base_url]}/api/v2/config_templates", token, {}, post_data, headers)
+      request(:post, "#{resource[:base_url]}/api/v2/config_templates", token, {}, post_data, headers)
     end
 
     def read(id=nil)
       if id
-        arch = consumer.request(:get, "#{resource[:base_url]}/api/v2/config_templates/#{id}", token, {})
+        arch = request(:get, "#{resource[:base_url]}/api/v2/config_templates/#{id}", token, {})
       else
-        arch = consumer.request(:get, "#{resource[:base_url]}/api/v2/config_templates?per_page=50", token, {})
+        arch = request(:get, "#{resource[:base_url]}/api/v2/config_templates?per_page=50", token, {})
       end
       result = JSON.parse(arch.read_body)
       return result
@@ -29,11 +29,11 @@ module Resources
 
     def update(id, config_hash)
       post_data = config_hash.to_json
-      consumer.request(:put, "#{resource[:base_url]}/api/v2/config_templates/#{id}", token, {}, post_data, headers)
+      request(:put, "#{resource[:base_url]}/api/v2/config_templates/#{id}", token, {}, post_data, headers)
     end
 
     def delete(id)
-      consumer.request(:delete, "#{resource[:base_url]}/api/v2/config_templates/#{id}", token, {})
+      request(:delete, "#{resource[:base_url]}/api/v2/config_templates/#{id}", token, {})
     end
   end
 end
