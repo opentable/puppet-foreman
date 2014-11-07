@@ -15,6 +15,7 @@ Puppet::Type.type(:foreman_image).provide(:rest) do
   end
 
   def images
+    #TODO: fix the NilClass bug here
     PuppetX::TheForeman::Resources::Images.new(resource, compute_resource_lookup(resource[:compute_resource])['id'])
   end
 
