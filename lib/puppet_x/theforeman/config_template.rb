@@ -21,7 +21,7 @@ module Resources
       if id
         arch = request(:get, "#{resource[:base_url]}/api/v2/config_templates/#{id}", token, {})
       else
-        arch = request(:get, "#{resource[:base_url]}/api/v2/config_templates?per_page=50", token, {})
+        arch = request(:get, "#{resource[:base_url]}/api/v2/config_templates?per_page=500", token, {})
       end
       result = JSON.parse(arch.read_body)
       return result
