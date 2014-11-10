@@ -54,13 +54,17 @@ module Resources
       attempts = 0
       begin
         consumer.request(method, uri, token, params, data, headers)
-      rescue Exception => ex
-        Puppet.err(ex)
+      rescue Timeout::Error => te
         attempts = attempts + 1
         if(attempts < MAX_ATTEMPTS)
+          Puppet.warn("Exception calling api. Re-trying ..")
           new_token
           retry
+        else
+          Puppet.error(te)
         end
+      rescue Exception => ex
+        Puppet.err(ex)
       end
     end
   end
