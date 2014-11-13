@@ -34,9 +34,9 @@ Puppet::Type.newtype(:foreman_compute_profile) do
     defaultto 'admin'
   end
 
-  #newparam(:config_attributes, :array_matching => :all) do
-  #  desc ''
-  #  defaultto []
-  #end
+  newparam(:compute_attributes) do
+    desc ''
+    defaultto {}
+  end
 
 end

@@ -57,11 +57,11 @@ module Resources
       rescue Timeout::Error => te
         attempts = attempts + 1
         if(attempts < MAX_ATTEMPTS)
-          Puppet.warn("Exception calling api. Re-trying ..")
+          Puppet.warning("Exception calling api. Re-trying ..")
           new_token
           retry
         else
-          Puppet.error(te)
+          Puppet.err(te)
         end
       rescue Exception => ex
         Puppet.err(ex)
