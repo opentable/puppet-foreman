@@ -40,8 +40,13 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
       { :id => 7, :name => 'user_data'},
       { :id => 8, :name => 'ZTP'}
     ]
-    templates.find { |t| t[:name] == name.to_s }[:id]
-  end
+		if !name.eql?('')
+      id = templates.find { |t| t[:name] == name.to_s }[:id]
+    else
+		  id = ''
+		end
+		return id
+	end
 
   def operatingsystem_lookup(names) #TODO: rename names to descriptions
     operatingsystems = PuppetX::TheForeman::Resources::OperatingSystems.new(resource)
