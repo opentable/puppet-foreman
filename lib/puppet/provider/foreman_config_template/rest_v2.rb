@@ -129,7 +129,12 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
   end
 
   def type
-    config_template ? config_template['template_kind_name'] : nil
+		if config_template and config_template['template_kind_name']
+			type = config_template['template_kind_name']
+		else
+			type = ''
+		end
+		return type
   end
 
   def type=(value)
@@ -137,7 +142,12 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
   end
 
   def operatingsystems
-    config_template ? os_descriptions(config_template['operatingsystems']) : nil
+    if config_template and config_template['operatingsystems']
+        os = os_descriptions(config_template['operatingsystems'])
+    else
+        os = []
+    end
+    return os.sort!
   end
 
   def operatingsystems=(value)

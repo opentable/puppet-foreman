@@ -52,6 +52,11 @@ Puppet::Type.newtype(:foreman_config_template) do
 
   newproperty(:operatingsystems, :array_matching => :all) do
     desc ''
-    defaultto ''
+    defaultto []
+
+		munge do |value|
+			value = [value]
+			value
+		end
   end
 end
