@@ -14,12 +14,12 @@ module Resources
 
     def create(profile_id, resource_id, compute_hash)
       post_data = compute_hash.to_json
-      request(:post, "#{resource[:base_url]}/api/v2/compute_profiles/#{profile_id}/compute_resources/#{resource_id}/compute_attributes", token, {}, post_data, headers)
+      request(:post, "#{base_url}/api/v2/compute_profiles/#{resource_id}/compute_resources/#{profile_id}/compute_attributes", token, {}, post_data, headers)
     end
 
     def update(profile_id, resource_id, id, compute_hash)
       post_data = compute_hash.to_json
-      request(:put, "#{resource[:base_url]}/api/v2/compute_profiles/#{profile_id}/compute_resources/#{resource_id}/compute_attributes/#{id}", token, {}, post_data, headers)
+      request(:put, "#{base_url}/api/v2/compute_profiles/#{resource_id}/compute_resources/#{profile_id}/compute_attributes/#{id}", token, {}, post_data, headers)
     end
   end
 

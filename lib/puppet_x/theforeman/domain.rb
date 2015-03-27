@@ -14,21 +14,21 @@ module Resources
 
     def create(domain_hash)
       post_data = domain_hash.to_json
-      request(:post, "#{resource[:base_url]}/api/v2/domains", token, {}, post_data, headers)
+      request(:post, "#{base_url}/api/v2/domains", token, {}, post_data, headers)
     end
 
     def read
-      domain = request(:get, "#{resource[:base_url]}/api/v2/domains", token, {})
+      domain = request(:get, "#{base_url}/api/v2/domains", token, {})
       JSON.parse(domain.read_body)
     end
 
     def update(id, domain_hash)
       post_data = domain_hash.to_json
-      request(:put, "#{resource[:base_url]}/api/v2/domains/#{id}", token, {}, post_data, headers)
+      request(:put, "#{base_url}/api/v2/domains/#{id}", token, {}, post_data, headers)
     end
 
     def delete(id)
-      request(:delete, "#{resource[:base_url]}/api/v2/domains/#{id}", token, {})
+      request(:delete, "#{base_url}/api/v2/domains/#{id}", token, {})
     end
   end
 

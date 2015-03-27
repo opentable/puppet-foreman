@@ -14,26 +14,29 @@ module Resources
 
     def create(ptable_hash)
       post_data = ptable_hash.to_json
-      request(:post, "#{resource[:base_url]}/api/v2/ptables", token, {}, post_data, headers)
+      request(:post, "#{base_url}/api/v2/ptables", token, {}, post_data, headers)
     end
 
     def read(id=nil)
-      if id
-        ptable = request(:get, "#{resource[:base_url]}/api/v2/ptables/#{id}", token, {})
-      else
-        ptable = request(:get, "#{resource[:base_url]}/api/v2/ptables", token, {})
+      req = request(:get, "#{base_url}/api/v2/ptables?per_page=500", token, {})
+      p_result = JSON.parse(req.read_body)
+      ptables = []
+      p_result['results'].each do |p|
+        id = p['id']
+        req = request(:get, "#{base_url}/api/v2/ptables/#{id}", token, {})
+        result = JSON.parse(req.read_body)
+        ptables.push(result)
       end
-
-      JSON.parse(ptable.read_body)
+      return ptables
     end
 
     def update(id, ptable_hash)
       post_data = ptable_hash.to_json
-      request(:put, "#{resource[:base_url]}/api/v2/ptables/#{id}", token, {}, post_data, headers)
+      request(:put, "#{base_url}/api/v2/ptables/#{id}", token, {}, post_data, headers)
     end
 
     def delete(id)
-      request(:delete, "#{resource[:base_url]}/api/v2/ptables/#{id}", token, {})
+      request(:delete, "#{base_url}/api/v2/ptables/#{id}", token, {})
     end
   end
 

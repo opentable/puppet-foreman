@@ -14,25 +14,25 @@ module Resources
 
     def create(organization_hash)
       post_data = organization_hash.to_json
-      request(:post, "#{resource[:base_url]}/api/v2/organizations", token, {}, post_data, headers)
+      request(:post, "#{base_url}/api/v2/organizations", token, {}, post_data, headers)
     end
 
     def read(id=nil)
       if id
-        organization = request(:get, "#{resource[:base_url]}/api/v2/organizations/#{id}", token, {})
+        organization = request(:get, "#{base_url}/api/v2/organizations/#{id}", token, {})
       else
-        organization = request(:get, "#{resource[:base_url]}/api/v2/organizations", token, {})
+        organization = request(:get, "#{base_url}/api/v2/organizations?per_page=500", token, {})
       end
       JSON.parse(organization.read_body)
     end
 
     def update(id, organization_hash)
       post_data = organization_hash.to_json
-      request(:put, "#{resource[:base_url]}/api/v2/organizations/#{id}", token, {}, post_data, headers)
+      request(:put, "#{base_url}/api/v2/organizations/#{id}", token, {}, post_data, headers)
     end
 
     def delete(id)
-      request(:delete, "#{resource[:base_url]}/api/v2/organizations/#{id}", token, {})
+      request(:delete, "#{base_url}/api/v2/organizations/#{id}", token, {})
     end
   end
 

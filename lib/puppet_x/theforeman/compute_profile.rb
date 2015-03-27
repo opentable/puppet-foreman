@@ -14,21 +14,21 @@ module Resources
 
     def create(compute_hash)
       post_data = compute_hash.to_json
-      request(:post, "#{resource[:base_url]}/api/v2/compute_profiles", token, {}, post_data, headers)
+      request(:post, "#{base_url}/api/v2/compute_profiles", token, {}, post_data, headers)
     end
 
     def read
-      compute = request(:get, "#{resource[:base_url]}/api/v2/compute_profiles", token, {})
+      compute = request(:get, "#{base_url}/api/v2/compute_profiles", token, {})
       JSON.parse(compute.read_body)
     end
 
     def delete(id)
-      compute = request(:delete, "#{resource[:base_url]}/api/v2/compute_profiles/#{id}", token, {})
+      compute = request(:delete, "#{base_url}/api/v2/compute_profiles/#{id}", token, {})
     end
 
     def update(id, compute_hash)
       post_data = compute_hash.to_json
-      request(:put, "#{resource[:base_url]}/api/v2/compute_profiles/#{id}", token, {}, post_data, headers)
+      request(:put, "#{base_url}/api/v2/compute_profiles/#{id}", token, {}, post_data, headers)
     end
   end
 

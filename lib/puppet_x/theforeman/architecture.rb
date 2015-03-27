@@ -14,16 +14,16 @@ module Resources
 
     def create(arch_hash)
       post_data = arch_hash.to_json
-      request(:post, "#{resource[:base_url]}/api/v2/architectures", token, {}, post_data, headers)
+      request(:post, "#{base_url}/api/v2/architectures", token, {}, post_data, headers)
     end
 
     def read
-      arch = request(:get, "#{resource[:base_url]}/api/v2/architectures", token, {})
+      arch = request(:get, "#{base_url}/api/v2/architectures", token, {})
       JSON.parse(arch.read_body)
     end
 
     def delete(id)
-      request(:delete, "#{resource[:base_url]}/api/v2/architectures/#{id}", token, {})
+      request(:delete, "#{base_url}/api/v2/architectures/#{id}", token, {})
     end
   end
 

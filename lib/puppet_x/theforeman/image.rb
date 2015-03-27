@@ -15,21 +15,21 @@ module Resources
 
     def create(images_hash)
       post_data = images_hash.to_json
-      request(:post, "#{resource[:base_url]}/api/v2/compute_resources/#{@compute_id}/images", token, {}, post_data, headers)
+      request(:post, "#{base_url}/api/v2/compute_resources/#{@compute_id}/images", token, {}, post_data, headers)
     end
 
     def read
-      compute = request(:get, "#{resource[:base_url]}/api/v2/compute_resources/#{@compute_id}/images", token, {})
+      compute = request(:get, "#{base_url}/api/v2/compute_resources/#{@compute_id}/images", token, {})
       JSON.parse(compute.read_body)
     end
 
     def update(id, compute_hash)
       post_data = compute_hash.to_json
-      request(:put, "#{resource[:base_url]}/api/v2/compute_resources/#{@compute_id}/images/#{id}", token, {}, post_data, headers)
+      request(:put, "#{base_url}/api/v2/compute_resources/#{@compute_id}/images/#{id}", token, {}, post_data, headers)
     end
 
     def delete(id)
-      request(:delete, "#{resource[:base_url]}/api/v2/compute_resources/#{@compute_id}/images/#{id}", token, {})
+      request(:delete, "#{base_url}/api/v2/compute_resources/#{@compute_id}/images/#{id}", token, {})
     end
   end
 

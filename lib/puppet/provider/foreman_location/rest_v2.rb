@@ -18,55 +18,70 @@ Puppet::Type.type(:foreman_location).provide(:rest) do
     end
   end
 
-  def locations_dao
-    PuppetX::TheForeman::Resources::Locations.new(resource)
+  mk_resource_methods
+
+  def initialize(value={})
+    super(value)
   end
 
-  def smartproxies_dao
-    PuppetX::TheForeman::Resources::SmartProxy.new(resource)
+  def self.locations
+    PuppetX::TheForeman::Resources::Locations.new(nil)
   end
 
-  def compute_resource_dao
-    PuppetX::TheForeman::Resources::ComputeResources.new(resource)
+  def self.smartproxies
+    PuppetX::TheForeman::Resources::SmartProxy.new(nil)
   end
 
-  def media_dao
-    PuppetX::TheForeman::Resources::MediaTypes.new(resource)
+  def self.compute_resource
+    PuppetX::TheForeman::Resources::ComputeResources.new(nil)
   end
 
-  def config_template_dao
-    PuppetX::TheForeman::Resources::ConfigTemplates.new(resource)
+  def self.media
+    PuppetX::TheForeman::Resources::MediaTypes.new(nil)
   end
 
-  def domain_dao
-    PuppetX::TheForeman::Resources::Domains.new(resource)
+  def self.config_template
+    PuppetX::TheForeman::Resources::ConfigTemplates.new(nil)
   end
 
-  def environment_dao
-    PuppetX::TheForeman::Resources::Environments.new(resource)
+  def self.domain
+    PuppetX::TheForeman::Resources::Domains.new(nil)
   end
 
-  def subnet_dao
-    PuppetX::TheForeman::Resources::Subnets.new(resource)
+  def self.environment
+    PuppetX::TheForeman::Resources::Environments.new(nil)
   end
 
-  def location
-    location = locations_dao.read
-    location['results'].each do |s|
-      if s['name'] == resource[:name]
-        @location = locations_dao.read(s['id'])
-        break
-      else
-        @location = nil
+  def self.subnet
+    PuppetX::TheForeman::Resources::Subnets.new(nil)
+  end
+
+  def self.instances
+    location_config = locations.read
+    location_config['results'].collect do |s|
+      location_hash = {
+        :name              => s['name'],
+        :id                => s['id'],
+        :ensure            => :present,
+        :smart_proxies     => s['smart_proxies'],
+        :compute_resources => s['compute_resources'],
+        :media             => s['media'],
+        :config_templates  => s['config_templates'],
+        :domains           => s['domains'],
+        :subnets           => s['subnets'],
+        :environments      => s['environments']
+      }
+      new(location_hash)
+    end
+  end
+
+  def self.prefetch(resources)
+    locations = instances
+    resources.keys.each do |location|
+      if provider = locations.find { |l| l.name == location }
+        resources[location].provider = provider
       end
     end
-    @location
-  end
-
-  def location_hash(hash)
-    location_hash = {
-      :location => hash
-    }
   end
 
   def lookup_ids(crud_class, names)
@@ -78,105 +93,64 @@ Puppet::Type.type(:foreman_location).provide(:rest) do
     end
     return ids
   end
-
-  def lookup_by_id(crud_class, id)
-    resource = crud_class.read
-    resource_name = resource['results'].find { |s| s['id'] == id }
-  end
-
-  def lookup_names(crud_class, attribute_array)
-    names = []
-    unless attribute_array.nil?
-      attribute_array.each do |h|
-        attribute_object = lookup_by_id(crud_class, h['id'])
-        unless attribute_object.nil?
-          names.push(attribute_object['name'])
-        end
-      end
-    end
-    return names.sort!
+  
+  def location_hash(hash)
+    location_hash = {
+      :location => hash
+    }
   end
 
   def id
-    location ? location['id'] : nil
+    @property_hash[:id]
   end
 
   def exists?
-    id != nil
+    @property_hash[:ensure] == :present
   end
 
   def create
     loc_hash = {
       'name'                 => resource[:name],
-      'smart_proxy_ids'      => lookup_ids(smartproxies_dao, resource[:smart_proxies]),
-      'compute_resource_ids' => lookup_ids(compute_resource_dao, resource[:compute_resources]),
-      'medium_ids'           => lookup_ids(media_dao, resource[:media]),
-      'config_template_ids'  => lookup_ids(config_template_dao, resource[:config_templates]),
-      'domain_ids'           => lookup_ids(domain_dao, resource[:domains]),
-      'environment_ids'      => lookup_ids(environment_dao, resource[:environments]),
-      'subnet_ids'           => lookup_ids(subnet_dao, resource[:subnets])
+      'smart_proxy_ids'      => lookup_ids(self.class.smartproxies, resource[:smart_proxies]),
+      'compute_resource_ids' => lookup_ids(self.class.compute_resource, resource[:compute_resources]),
+      'medium_ids'           => lookup_ids(self.class.media, resource[:media]),
+      'config_template_ids'  => lookup_ids(self.class.config_template, resource[:config_templates]),
+      'domain_ids'           => lookup_ids(self.class.domain, resource[:domains]),
+      'environment_ids'      => lookup_ids(self.class.environment, resource[:environments]),
+      'subnet_ids'           => lookup_ids(self.class.subnet, resource[:subnets])
     }
-    locations_dao.create(location_hash(loc_hash))
+    self.class.locations.create(location_hash(loc_hash))
   end
 
   def destroy
-    locations_dao.delete(id)
-    @location = nil
-  end
-
-  def smart_proxies
-    location ? lookup_names(smartproxies_dao, location['smart_proxies']) : nil
+    self.class.locations.delete(id)
   end
 
   def smart_proxies=(value)
-    locations_dao.update(id, location_hash(:smart_proxy_ids => lookup_ids(smartproxies_dao, value)))
-  end
-
-  def compute_resources
-    location ? lookup_names(compute_resource_dao, location['compute_resources']) : nil
+    self.class.locations.update(id, location_hash(:smart_proxy_ids => lookup_ids(self.class.smartproxies, value)))
   end
 
   def compute_resources=(value)
-    locations_dao.update(id, location_hash(:compute_resource_ids => lookup_ids(compute_resource_dao, value)))
-  end
-
-  def media
-    location ? lookup_names(media_dao, location['media']) : nil
+    self.class.locations.update(id, location_hash(:compute_resource_ids => lookup_ids(self.class.compute_resource, value)))
   end
 
   def media=(value)
-    locations_dao.update(id, location_hash(:medium_ids => lookup_ids(media_dao, value)))
-  end
-
-  def config_templates
-    location ? lookup_names(config_template_dao, location['config_templates']) : nil
+    self.class.locations.update(id, location_hash(:medium_ids => lookup_ids(self.class.media, value)))
   end
 
   def config_templates=(value)
-    locations_dao.update(id, location_hash(:config_template_ids => lookup_ids(config_template_dao, value)))
-  end
-
-  def domains
-    location ? lookup_names(domain_dao, location['domains']) : nil
+    self.class.locations.update(id, location_hash(:config_template_ids => lookup_ids(self.class.config_template, value)))
   end
 
   def domains=(value)
-    locations_dao.update(id, location_hash(:domain_ids => lookup_ids(domain_dao, value)))
-  end
-
-  def environments
-    location ? lookup_names(environment_dao, location['environments']) : nil
+    self.class.locations.update(id, location_hash(:domain_ids => lookup_ids(self.class.domains, value)))
   end
 
   def environments=(value)
-    locations_dao.update(id, location_hash(:environment_ids => lookup_ids(environment_dao, value)))
-  end
-
-  def subnets
-    location ? lookup_names(subnet_dao, location['subnets']) : nil
+    self.class.locations.update(id, location_hash(:environment_ids => lookup_ids(self.class.environments, value)))
   end
 
   def subnets=(value)
-    locations_dao.update(id, location_hash(:subnet_ids => lookup_ids(subnet_dao, value)))
+    self.class.locations.update(id, location_hash(:subnet_ids => lookup_ids(self.class.subnets, value)))
   end
 end

@@ -11,25 +11,39 @@ Puppet::Type.type(:foreman_architecture).provide(:rest) do
     end
   end
 
-  def architectures
-    PuppetX::TheForeman::Resources::Architectures.new(resource)
+  mk_resource_methods
+
+  def initialize(value={})
+    super(value)
   end
 
-  def architecture
-    if @arch
-      @arch
-    else
-      arch = architectures.read
-      @arch = arch['results'].find { |s| s['name'] == resource[:name] }
+  def self.architectures
+    PuppetX::TheForeman::Resources::Architectures.new(nil)
+  end
+
+  def self.instances
+    arch_config = architectures.read
+    arch_config['results'].collect do |s|
+      arch_hash = {
+        :name   => s['name'],
+        :id     => s['id'],
+        :ensure => :present
+      }
+      new(arch_hash)
     end
   end
 
-  def id
-    architecture ? architecture['id'] : nil
+  def self.prefetch(resources)
+    architectures = instances
+    resources.keys.each do |architecture|
+      if provider = architectures.find { |a| a.name == architecture }
+        resources[architecture].provider = provider
+      end
+    end
   end
 
   def exists?
-    id != nil
+    @property_hash[:ensure] == :present
   end
 
   def create
@@ -37,12 +51,18 @@ Puppet::Type.type(:foreman_architecture).provide(:rest) do
       'name' => resource[:name]
     }
 
-    architectures.create(arch_hash)
+    self.class.architectures.create(arch_hash)
   end
 
   def destroy
-    architectures.delete(id)
-    @arch = nil
+    self.class.architectures.delete(id)
   end
 
+  def name=(value)
+    self.class.architectures.update(id, { :name => value })
+  end
+  
+  def id
+    @property_hash[:id]
+  end
 end

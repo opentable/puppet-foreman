@@ -18,54 +18,76 @@ Puppet::Type.type(:foreman_organization).provide(:rest) do
       false
     end
   end
+ 
+  mk_resource_methods
 
-  def organizations_dao
-    PuppetX::TheForeman::Resources::Organizations.new(resource)
+  def initialize(value={})
+    super(value)
   end
 
-  def smartproxies_dao
-    PuppetX::TheForeman::Resources::SmartProxy.new(resource)
+  def self.organizations
+    PuppetX::TheForeman::Resources::Organizations.new(nil)
   end
 
-  def compute_resource_dao
-    PuppetX::TheForeman::Resources::ComputeResources.new(resource)
+  def self.smartproxies
+    PuppetX::TheForeman::Resources::SmartProxy.new(nil)
   end
 
-  def media_dao
-    PuppetX::TheForeman::Resources::MediaTypes.new(resource)
+  def self.compute_resource
+    PuppetX::TheForeman::Resources::ComputeResources.new(nil)
   end
 
-  def config_template_dao
-    PuppetX::TheForeman::Resources::ConfigTemplates.new(resource)
+  def self.media
+    PuppetX::TheForeman::Resources::MediaTypes.new(nil)
   end
 
-  def domain_dao
-    PuppetX::TheForeman::Resources::Domains.new(resource)
+  def self.config_template
+    PuppetX::TheForeman::Resources::ConfigTemplates.new(nil)
   end
 
-  def environment_dao
-    PuppetX::TheForeman::Resources::Environments.new(resource)
+  def self.domain
+    PuppetX::TheForeman::Resources::Domains.new(nil)
   end
 
-  def subnet_dao
-    PuppetX::TheForeman::Resources::Subnets.new(resource)
+  def self.environment
+    PuppetX::TheForeman::Resources::Environments.new(nil)
   end
 
-  def location_dao
-    PuppetX::TheForeman::Resources::Locations.new(resource)
+  def self.subnet
+    PuppetX::TheForeman::Resources::Subnets.new(nil)
   end
 
-  def organization
-    organization = organizations_dao.read
-    organization['results'].each do |s|
-      if s['name'] == resource[:name]
-        @organization = organizations_dao.read(s['id'])
-        break
-      else
-        @organization = nil
+  def self.location
+    PuppetX::TheForeman::Resources::Locations.new(nil)
+  end
+   
+  def self.instances
+    org_config = organizations.read
+    org_config['results'].collect do |s|
+      org_hash = {
+        :name              => s['name'],
+        :id                => s['id'],
+        :ensure            => :present,
+        :smart_proxies     => s['smart_proxies'],
+        :compute_resources => s['compute_resources'],
+        :media             => s['media'],
+        :config_templates  => s['config_templates'],
+        :domains           => s['domains'],
+        :subnets           => s['subnets'],
+        :environments      => s['environments'],
+        :locations         => s['locations']
+      }
+      new(org_hash)
+    end
+  end
+
+  def self.prefetch(resources)
+    organizations = instances
+    resources.keys.each do |organization|
+      if provider = organizations.find { |o| o.name == organization }
+        resources[organization].provider = provider
       end
     end
-    @organization
   end
 
   def organization_hash(hash)
@@ -84,113 +106,62 @@ Puppet::Type.type(:foreman_organization).provide(:rest) do
     return ids
   end
 
-  def lookup_by_id(crud_class, id)
-    resource = crud_class.read
-    resource_name = resource['results'].find { |s| s['id'] == id }
-  end
-
-  def lookup_names(crud_class, attribute_array)
-    names = []
-    unless attribute_array.nil?
-      attribute_array.each do |h|
-        attribute_object = lookup_by_id(crud_class, h['id'])
-        unless attribute_object.nil?
-          names.push(attribute_object['name'])
-        end
-      end
-    end
-    return names.sort!
-  end
-
   def id
-    organization ? organization['id'] : nil
+    @property_hash[:id]
   end
 
   def exists?
-    id != nil
+    @property_hash[:ensure] == :present
   end
 
   def create
     org_hash = {
       'name'                 => resource[:name],
-      'smart_proxy_ids'      => lookup_ids(smartproxies_dao, resource[:smart_proxies]),
-      'compute_resource_ids' => lookup_ids(compute_resource_dao, resource[:compute_resources]),
-      'medium_ids'           => lookup_ids(media_dao, resource[:media]),
-      'config_template_ids'  => lookup_ids(config_template_dao, resource[:config_templates]),
-      'domain_ids'           => lookup_ids(domain_dao, resource[:domains]),
-      'environment_ids'      => lookup_ids(environment_dao, resource[:environments]),
-      'subnet_ids'           => lookup_ids(subnet_dao, resource[:subnets]),
-      'location_ids'         => lookup_ids(location_dao, resource[:locations]),
+      'smart_proxy_ids'      => lookup_ids(self.class.smartproxies, resource[:smart_proxies]),
+      'compute_resource_ids' => lookup_ids(self.class.compute_resource, resource[:compute_resources]),
+      'medium_ids'           => lookup_ids(self.class.media, resource[:media]),
+      'config_template_ids'  => lookup_ids(self.class.config_template, resource[:config_templates]),
+      'domain_ids'           => lookup_ids(self.class.domain, resource[:domains]),
+      'environment_ids'      => lookup_ids(self.class.environment, resource[:environments]),
+      'subnet_ids'           => lookup_ids(self.class.subnet, resource[:subnets]),
+      'location_ids'         => lookup_ids(self.class.location, resource[:locations]),
     }
-    organizations_dao.create(organization_hash(org_hash))
+    self.class.organizations.create(organization_hash(org_hash))
   end
 
   def destroy
-    organizations_dao.delete(id)
-    @organization = nil
-  end
-
-  def smart_proxies
-    organization ? lookup_names(smartproxies_dao, organization['smart_proxies']) : nil
+    self.class.organizations.delete(id)
   end
 
   def smart_proxies=(value)
-    organizations_dao.update(id, organization_hash(:smart_proxy_ids => lookup_ids(smartproxies_dao, value)))
-  end
-
-  def compute_resources
-    organization ? lookup_names(compute_resource_dao, organization['compute_resources']) : nil
+    self.class.organizations.update(id, organization_hash(:smart_proxy_ids => lookup_ids(self.class.smartproxies, value)))
   end
 
   def compute_resources=(value)
-    organizations_dao.update(id, organization_hash(:compute_resource_ids => lookup_ids(compute_resource_dao, value)))
-  end
-
-  def media
-    organization ? lookup_names(media_dao, organization['media']) : nil
+    self.class.organizations.update(id, organization_hash(:compute_resource_ids => lookup_ids(self.class.compute_resource, value)))
   end
 
   def media=(value)
-    organizations_dao.update(id, organization_hash(:medium_ids => lookup_ids(media_dao, value)))
-  end
-
-  def config_templates
-    organization ? lookup_names(config_template_dao, organization['config_templates']) : nil
+    self.class.organizations.update(id, organization_hash(:medium_ids => lookup_ids(self.class.media, value)))
   end
 
   def config_templates=(value)
-    organizations_dao.update(id, organization_hash(:config_template_ids => lookup_ids(config_template_dao, value)))
-  end
-
-  def domains
-    organization ? lookup_names(domain_dao, organization['domains']) : nil
+    self.class.organizations.update(id, organization_hash(:config_template_ids => lookup_ids(self.class.config_template, value)))
   end
 
   def domains=(value)
-    organizations_dao.update(id, organization_hash(:domain_ids => lookup_ids(domain_dao, value)))
-  end
-
-  def environments
-    organization ? lookup_names(environment_dao, organization['environments']) : nil
+    self.class.organizations.update(id, organization_hash(:domain_ids => lookup_ids(self.class.domain, value)))
   end
 
   def environments=(value)
-    organizations_dao.update(id, organization_hash(:environment_ids => lookup_ids(environment_dao, value)))
+    self.class.organizations.update(id, organization_hash(:environment_ids => lookup_ids(self.class.environment, value)))
   end
-
-  def subnets
-    organization ? lookup_names(subnet_dao, organization['subnets']) : nil
-  end
-
+  
   def subnets=(value)
-    organizations_dao.update(id, organization_hash(:subnet_ids => lookup_ids(subnet_dao, value)))
-  end
-
-  def locations
-    organization ? lookup_names(location_dao, organization['locations']) : nil
+    self.class.organizations.update(id, organization_hash(:subnet_ids => lookup_ids(self.class.subnet, value)))
   end
 
   def locations=(value)
-    organizations_dao.update(id, organization_hash(:location_ids => lookup_ids(location_dao, value)))
+    self.class.organizations.update(id, organization_hash(:location_ids => lookup_ids(self.class.location, value)))
   end
 end

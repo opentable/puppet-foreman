@@ -12,81 +12,94 @@ Puppet::Type.type(:foreman_domain).provide(:rest) do
     end
   end
 
-  def domains
-    PuppetX::TheForeman::Resources::Domains.new(resource)
+  mk_resource_methods
+
+  def initialize(value={})
+    super(value)
   end
 
-  def domain
-    if @domain
-      @domain
-    else
-      domain = domains.read
-      @domain = domain['results'].find { |s| s['name'] == resource[:name] }
+  def self.domains
+    PuppetX::TheForeman::Resources::Domains.new(nil)
+  end
+
+  def self.smartproxies
+    PuppetX::TheForeman::Resources::SmartProxy.new(nil)
+  end
+
+  def self.instances
+    domain_config = domains.read
+    domain_config['results'].collect do |s|
+       
+      dns = smartproxy_lookup_id(s['dns_id'])
+      
+      domain_hash = {
+        :name        => s['name'],
+        :id          => s['id'],
+        :ensure      => :present,
+        :description => s['fullname'],
+        :dns_proxy   => dns ? dns['name'] : nil
+      }
+      new(domain_hash)
     end
   end
 
-  def smartproxies
-    PuppetX::TheForeman::Resources::SmartProxy.new(resource)
+  def self.prefetch(resources)
+    domains = instances
+    resources.keys.each do |domain|
+      if provider = domains.find { |d| d.name == domain }
+       resources[domain].provider = provider 
+      end
+    end 
   end
 
-  def smartproxy_lookup(name)
+  def self.smartproxy_lookup(name)
     proxy = smartproxies.read
     proxy['results'].find { |s| s['name'] == name }
   end
 
-  def smartproxy_lookup_id(id)
+  def self.smartproxy_lookup_id(id)
     proxy = smartproxies.read
     proxy['results'].find { |s| s['id'] == id }
   end
 
-  def id
-    domain ? domain['id'] : nil
-  end
-
   def exists?
-    id != nil
+    @property_hash[:ensure] == :present
   end
 
   def create
     domain_hash = {
       'name'     => resource[:name],
-      'fullname' => resource[:description]
+      'fullname' => resource[:description],
     }
 
-    dns = smartproxy_lookup(resource[:dns_proxy])
+    dns = self.class.smartproxy_lookup(resource[:dns_proxy])
     if dns
       domain_hash['dns_id'] = dns['id']
     end
 
-    domains.create(domain_hash)
+    self.class.domains.create(domain_hash)
   end
 
   def destroy
-    domains.delete(id)
-    @domain = nil
+    self.class.domains.delete(id)
   end
 
-  def description
-    domain ? domain['fullname'] : nil
+  def id
+    @property_hash[:id]
+  end
+
+  def name=(value)
+    self.class.domains.update(id, { :name => value })
   end
 
   def description=(value)
-    domains.update(id, { :fullname => value })
-  end
-
-  def dns_proxy
-    if domain
-      dns = smartproxy_lookup_id(domain['dns_id'])
-      dns ? dns['name'] : nil
-    else
-      nil
-    end
+    self.class.domains.update(id, { :fullname => value })
   end
 
   def dns_proxy=(value)
-    dns = smartproxy_lookup(value)
+    dns = self.class.smartproxy_lookup(value)
     if dns
-      domains.update(id, { :dns_id => dns['id'] })
+      self.class.domains.update(id, { :dns_id => dns['id'] })
     end
   end
 

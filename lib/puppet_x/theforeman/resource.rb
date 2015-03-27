@@ -11,27 +11,32 @@ module Resources
     attr_reader :consumer
     attr_reader :headers
     attr_reader :token
+    attr_reader :base_url
 
-    MAX_ATTEMPTS = 10
+    MAX_ATTEMPTS = 5
 
     def initialize(resource)
       settings = YAML.load_file('/etc/foreman/settings.yaml')
-      @resource = resource
 
-      if @resource[:consumer_key].eql?('')
-        consumer_key = settings[:oauth_consumer_key]
-      else
-        consumer_key = resource[:consumer_key]
-      end
+      consumer_key = settings[:oauth_consumer_key]
+      consumer_secret = settings[:oauth_consumer_secret]
 
-      if @resource[:consumer_secret].eql?('')
-        consumer_secret = settings[:oauth_consumer_secret]
-      else
-        consumer_secret = @resource[:consumer_secret]
+      require_ssl = settings[:require_ssl]
+      url = require_ssl.eql?('true') ? 'https://localhost' : 'http://localhost'
+
+      port = '3000'
+      file = File.new('/etc/default/foreman','r')
+      while (line = file.gets)
+        if line.include?('FOREMAN_PORT') && !line.start_with?('#')
+          port = line.split('=')[1]
+        end
       end
+      file.close
+
+      @base_url = "#{url}:#{port}"
 
       oauth_options = {
-        :site               => @resource[:base_url],
+        :site               => base_url,
         :request_token_path => '',
         :authorize_path     => '',
         :access_token_path  => ''
@@ -64,7 +69,11 @@ module Resources
           Puppet.err(te)
         end
       rescue Exception => ex
-        Puppet.err(ex)
+        msg = "Exception #{ex} in #{method} request to: #{uri}"
+        Puppet.err msg
+        error = Puppet::Error.new(msg)
+        #error.set_backtrace exc.backtrace
+        raise error
       end
     end
   end

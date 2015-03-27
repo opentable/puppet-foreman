@@ -11,22 +11,71 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
       false
     end
   end
+  
+  mk_resource_methods
 
-  def config_templates
-    PuppetX::TheForeman::Resources::ConfigTemplates.new(resource)
+  def initialize(value={})
+    super(value)
   end
 
-  def config_template
+  def self.config_templates
+   PuppetX::TheForeman::Resources::ConfigTemplates.new(nil)
+  end
+
+  def self.operating_systems
+    PuppetX::TheForeman::Resources::OperatingSystems.new(nil)
+  end
+
+  def self.instances
     config = config_templates.read
-    config['results'].each do |s|
-      if s['name'] == resource[:name]
-        @config = config_templates.read(s['id'])
-        break
-      else
-        @config = nil
+    config.collect do |s|
+      template_hash = {
+        :name             => s['name'],
+        :ensure           => :present,
+        :id               => s['id'],
+        :template         => s['template'],
+        :snippet          => s['snippet'],
+        :type             => (s['template_kind_name'] ? s['template_kind_name'] : ''),
+        :operatingsystems => (s['operatingsystems'] ? os_descriptions(s['operatingsystems']) : [])
+      }
+      new(template_hash)
+    end
+  end
+
+  def self.prefetch(resources)
+    templates = instances
+    resources.keys.each do |template|
+      if provider = templates.find {|t| t.name == template }
+        resources[template].provider = provider
       end
     end
-    @config
+  end
+
+  def self.os_descriptions(os_array)
+    names = []
+    os_list = operating_systems.read
+    os_array.each do |os|
+      os_list.each do |fos|
+        if os['id'].eql?(fos['id'])
+          names.push(fos['description'])
+        end
+      end
+    end
+    return names.sort!
+  end
+
+  def os_lookup(os_array)
+    os_values = []
+    os_list = self.class.operating_systems.read
+    os_array.each do |os|
+      os_list.each do |fos|
+        if os.eql?(fos['description'])
+          os_values.push(fos)
+        end
+      end
+    end
+ 
+    return os_values
   end
 
   def template_id(name)
@@ -40,50 +89,17 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
       { :id => 7, :name => 'user_data'},
       { :id => 8, :name => 'ZTP'}
     ]
-		if !name.eql?('')
+    
+    if !name.eql?('')
       id = templates.find { |t| t[:name] == name.to_s }[:id]
     else
-		  id = ''
-		end
-		return id
-	end
-
-  def operatingsystem_lookup(names) #TODO: rename names to descriptions
-    operatingsystems = PuppetX::TheForeman::Resources::OperatingSystems.new(resource)
-    os = operatingsystems.read
-    os_names = []
-    names.each do |name|
-      os_name = os['results'].find { |s| s['description'] == name }
-      os_names.push(os_name)
+      id = ''
     end
-    return os_names
-  end
-
-  def os_lookup_by_id(id)
-    operatingsystems = PuppetX::TheForeman::Resources::OperatingSystems.new(resource)
-    os = operatingsystems.read
-    os_name = os['results'].find { |s| s['id'] == id }
-  end
-
-  def os_descriptions(os_array)
-    names = []
-    unless os_array.nil?
-      os_array.each do |h|
-        os_object = os_lookup_by_id(h['id'])
-        unless os_object.nil?
-          names.push(os_object['description'])
-        end
-      end
-    end
-    return names.sort!
-  end
-
-  def id
-    config_template ? config_template['id'] : nil
+    return id
   end
 
   def exists?
-    id != nil
+    @property_hash[:ensure] == :present
   end
 
   def create
@@ -93,64 +109,37 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
       'snippet'            => resource[:snippet],
       'template_kind_id'   => template_id(resource[:type]),
       'template_kind_name' => resource[:type],
-      'operatingsystems'   => operatingsystem_lookup(resource[:operatingsystems])
+      'operatingsystems'   => os_lookup(resource[:operatingsystems])
     }
 
-    config_templates.create(config_hash)
+    self.class.config_templates.create(config_hash)
   end
 
   def destroy
-    config_templates.delete(id)
-    @config = nil
+    self.class.config_templates.delete(id)
   end
-
-  def name
-    config_template ? config_template['name'] : nil
+  
+  def id
+    @property_hash[:id]
   end
 
   def name=(value)
-    config_templates.update(id, { :name => value })
-  end
-
-  def template
-    config_template ? config_template['template'] : nil
+    self.class.config_templates.update(id, { :name => value })
   end
 
   def template=(value)
-    config_templates.update(id, { :template => value })
-  end
-
-  def snippet
-    config_template ? config_template['snippet'] : nil
+    self.class.config_templates.update(id, { :template => value })
   end
 
   def snippet=(value)
-    config_templates.update(id, { :snippet => value })
-  end
-
-  def type
-		if config_template and config_template['template_kind_name']
-			type = config_template['template_kind_name']
-		else
-			type = ''
-		end
-		return type
+    self.class.config_templates.update(id, { :snippet => value })
   end
 
   def type=(value)
-    config_templates.update(id, { :template_kind_id => template_id(value), :template_kind_name => value })
-  end
-
-  def operatingsystems
-    if config_template and config_template['operatingsystems']
-        os = os_descriptions(config_template['operatingsystems'])
-    else
-        os = []
-    end
-    return os.sort!
+    self.class.config_templates.update(id, { :template_kind_id => template_id(value), :template_kind_name => value })
   end
 
   def operatingsystems=(value)
-    config_templates.update(id, { :operatingsystems => operatingsystem_lookup(value.sort!) })
+    self.class.config_templates.update(id, { :operatingsystems => os_lookup(value) })
   end
 end

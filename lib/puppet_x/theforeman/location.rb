@@ -14,25 +14,25 @@ module Resources
 
     def create(location_hash)
       post_data = location_hash.to_json
-      request(:post, "#{resource[:base_url]}/api/v2/locations", token, {}, post_data, headers)
+      request(:post, "#{base_url}/api/v2/locations", token, {}, post_data, headers)
     end
 
     def read(id=nil)
       if id
-        location = request(:get, "#{resource[:base_url]}/api/v2/locations/#{id}", token, {})
+        location = request(:get, "#{base_url}/api/v2/locations/#{id}", token, {})
       else
-        location = request(:get, "#{resource[:base_url]}/api/v2/locations", token, {})
+        location = request(:get, "#{base_url}/api/v2/locations", token, {})
       end
       JSON.parse(location.read_body)
     end
 
     def update(id, location_hash)
       post_data = location_hash.to_json
-      request(:put, "#{resource[:base_url]}/api/v2/locations/#{id}", token, {}, post_data, headers)
+      request(:put, "#{base_url}/api/v2/locations/#{id}", token, {}, post_data, headers)
     end
 
     def delete(id)
-      request(:delete, "#{resource[:base_url]}/api/v2/locations/#{id}", token, {})
+      request(:delete, "#{base_url}/api/v2/locations/#{id}", token, {})
     end
   end
 

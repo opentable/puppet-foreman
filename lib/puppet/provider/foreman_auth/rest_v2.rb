@@ -11,25 +11,56 @@ Puppet::Type.type(:foreman_auth).provide(:rest) do
     end
   end
 
-  def auth_sources
-    PuppetX::TheForeman::Resources::AuthSources.new(resource)
+  mk_resource_methods
+
+  def initialize(value={})
+    super(value)
   end
 
-  def auth_source
-    if @auth
-      @auth
-    else
-      auth = auth_sources.read
-      @auth = auth['results'].find { |s| s['name'] == resource[:name] }
+  def self.auth_sources
+    PuppetX::TheForeman::Resources::AuthSources.new(nil)
+  end
+
+  def self.instances
+    auth_config = auth_sources.read
+    auth_config['results'].collect do |s|
+      auth_hash = {
+        :name              => s['name'],
+        :id                => s['id'],
+        :ensure            => :present,
+        :host              => s['host'],
+        :ldaps             => s['tls'],
+        :port              => s['port'].to_s,
+        :server_type       => s['server_type'],
+        :account           => s['account'],
+        :base_dn           => s['base_dn'],
+        :account_password  => s['account_password'],
+        :attr_login        => s['attr_login'],
+        :attr_firstname    => s['attr_firstname'],
+        :attr_lastname     => s['attr_lastname'],
+        :attr_mail         => s['attr_mail'],
+        :attr_photo        => s['attr_photo'],
+        :register_users    => s['onthefly_register']
+      }
+      new(auth_hash)
+    end
+  end
+
+  def self.prefetch(resources)
+    auth_sources = instances
+    resources.keys.each do |auth_source|
+      if provider = auth_sources.find { |a| a.name == auth_source }
+        resources[auth_source].provider = provider
+      end
     end
   end
 
   def id
-    auth_source ? auth_source['id'] : nil
+    @property_hash[:id]
   end
 
   def exists?
-    id != nil
+    @property_hash[:ensure] == :present
   end
 
   def to_bool(value)
@@ -62,7 +93,6 @@ Puppet::Type.type(:foreman_auth).provide(:rest) do
   end
 
   def create
-    Puppet.debug("HERE")
     auth_hash = {
       'name'              => resource[:name],
       'host'              => resource[:host],
@@ -80,101 +110,63 @@ Puppet::Type.type(:foreman_auth).provide(:rest) do
       'onthefly_register' => to_bool(resource[:register_users])
     }
 
-    Puppet.debug("END")
-    auth_sources.create(auth_hash)
+    self.class.auth_sources.create(auth_hash)
   end
 
   def destroy
-    auth_sources.delete(id)
-    @auth = nil
+    self.class.auth_sources.delete(id)
   end
 
-  def host
-    auth_source ? auth_source['host'] : nil
+  def name=(value)
+    self.class.auth_sources.update(id, { :name => value })
   end
 
   def host=(value)
-    auth_sources.update(id, { :host => value })
-  end
-
-  def port
-    auth_source ? auth_source['port'].to_s : nil
-  end
-
-  def port=(value)
-    auth_sources.update(id, { :port => value })
-  end
-
-  def ldaps
-    auth_source ? auth_source['tls'] : nil
+    self.class.auth_sources.update(id, { :host => value })
   end
 
   def ldaps=(value)
-    auth_sources.update(id, { :tls => value })
+    self.class.auth_sources.update(id, { :tls => to_bool(value) })
   end
 
-  def account
-    auth_source ? auth_source['account'] : nil
+  def port=(value)
+    self.class.auth_sources.update(id, { :port => value })
+  end
+
+  def server_type=(value)
+    self.class.auth_sources.update(id, { :server_type => string_to_servertype(value) })
   end
 
   def account=(value)
-    auth_sources.update(id, { :account => value })
-  end
-
-  def base_dn
-    auth_source ? auth_source['base_dn'] : nil
+    self.class.auth_sources.update(id, { :account => value })
   end
 
   def base_dn=(value)
-    auth_sources.update(id, { :base_dn => value })
-  end
-
-  def attr_login
-    auth_source ? auth_source['attr_login'] : nil
+    self.class.auth_sources.update(id, { :base_dn => value })
   end
 
   def attr_login=(value)
-    auth_sources.update(id, { :attr_login => value })
-  end
-
-  def attr_firstname
-    auth_source ? auth_source['attr_firstname'] : nil
+    self.class.auth_sources.update(id, { :attr_login => value })
   end
 
   def attr_firstname=(value)
-    auth_sources.update(id, { :attr_firstname => value })
-  end
-
-  def attr_lastname
-    auth_source ? auth_source['attr_lastname'] : nil
+    self.class.auth_sources.update(id, { :attr_firstname => value })
   end
 
   def attr_lastname=(value)
-    auth_sources.update(id, { :attr_lastname => value })
-  end
-
-  def attr_mail
-    auth_source ? auth_source['attr_mail'] : nil
+    self.class.auth_sources.update(id, { :attr_lastname => value })
   end
 
   def attr_mail=(value)
-    auth_sources.update(id, { :attr_mail => value })
-  end
-
-  def attr_photo
-    auth_source ? auth_source['attr_photo'] : nil
+    self.class.auth_sources.update(id, { :attr_mail => value })
   end
 
   def attr_photo=(value)
-    auth_sources.update(id, { :attr_photo => value })
-  end
-
-  def register_users
-    auth_source ? auth_source['onthefly_register'] : nil
+    self.class.auth_sources.update(id, { :attr_photo => value })
   end
 
   def register_users=(value)
-    auth_sources.update(id, { :onthefly_register => to_bool(value) })
+    self.class.auth_sources.update(id, { :onthefly_register => to_bool(value) })
   end
 
 end

@@ -11,25 +11,40 @@ Puppet::Type.type(:foreman_smartproxy).provide(:rest) do
     end
   end
 
-  def smartproxies
-    PuppetX::TheForeman::Resources::SmartProxy.new(resource)
+  mk_resource_methods
+
+  def initialize(value={})
+    super(value)
   end
 
-  def smartproxy
-    if @proxy
-      @proxy
-    else
-      proxy = smartproxies.read
-      @proxy = proxy['results'].find { |s| s['name'] == resource[:name] }
+  def self.smartproxies
+    PuppetX::TheForeman::Resources::SmartProxy.new(nil)
+  end
+
+  def self.instances
+    proxy = smartproxies.read
+    proxy['results'].collect do |s|
+      proxy_hash = {
+        :name   => s['name'],
+        :id     => s['id'],
+        :ensure => :present,
+        :url    => s['url']
+      }
+      new(proxy_hash)
     end
   end
 
-  def id
-    smartproxy ? smartproxy['id'] : nil
+  def self.prefetch(resources)
+    proxies = instances
+    resources.keys.each do |proxy|
+      if provider = proxies.find { |p| p.name == proxy }
+        resources[proxy].provider = provider
+      end
+    end
   end
 
   def exists?
-    id != nil
+    !@property_hash.empty? ? @property_hash[:ensure] = :present : false
   end
 
   def create
@@ -38,20 +53,23 @@ Puppet::Type.type(:foreman_smartproxy).provide(:rest) do
       'url'  => resource[:url]
     }
 
-    smartproxies.create(proxy_hash)
+    self.class.smartproxies.create(proxy_hash)
   end
 
   def destroy
-    smartproxies.delete(id)
-    @proxy = nil
+    self.class.smartproxies.delete(id)
   end
 
-  def url
-    smartproxy ? smartproxy['url'] : nil
+  def id
+    @property_hash[:id]
+  end
+
+  def name=(value)
+    self.class.smartproxies.update(id, { :name => value })
   end
 
   def url=(value)
-    smartproxies.update(id, { :url => value })
+    self.class.smartproxies.update(id, { :url => value })
   end
 
 end

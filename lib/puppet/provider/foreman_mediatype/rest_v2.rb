@@ -11,33 +11,41 @@ Puppet::Type.type(:foreman_mediatype).provide(:rest) do
     end
   end
 
-  def media_types
-    PuppetX::TheForeman::Resources::MediaTypes.new(resource)
+  mk_resource_methods
+  
+  def initialize(value={})
+    super(value)
   end
 
-  def media_type
-    if @media
-      @media
-    else
-      media = media_types.read
-      media['results'].each do |s|
-        if s['name'] == resource[:name]
-          @media = media_types.read(s['id'])
-          break
-        else
-          @media = nil
-        end
+  def self.media_types
+    PuppetX::TheForeman::Resources::MediaTypes.new(nil)
+  end
+
+  def self.instances
+    media_config = media_types.read
+    media_config['results'].collect do |s|
+      media_hash = {
+        :name      => s['name'],
+        :id        => s['id'],
+        :path      => s['path'],
+        :os_family => s['os_family'],
+        :ensure    => :present
+      }
+      new(media_hash)
+    end
+  end
+
+  def self.prefetch(resources)
+    media_types = instances
+    resources.keys.each do |media|
+      if provider = media_types.find { |m| m.name == media }
+        resources[media].provider = provider
       end
     end
-    @media
-  end
-
-  def id
-    media_type ? media_type['id'] : nil
   end
 
   def exists?
-    id != nil
+    @property_hash[:ensure] == :present
   end
 
   def create
@@ -47,28 +55,27 @@ Puppet::Type.type(:foreman_mediatype).provide(:rest) do
       'os_family'          => resource[:os_family]
     }
 
-    media_types.create(config_hash)
+    self.class.media_types.create(config_hash)
+  end
+
+  def id
+    @property_hash[:id]
   end
 
   def destroy
-    media_types.delete(id)
-    @media = nil
+    self.class.media_types.delete(id)
   end
 
-  def path
-    media_type ? media_type['path'] : nil
+  def name=(value)
+    self.class.media_types.update(id, { :name => value })
   end
 
   def path=(value)
-    media_types.update(id, { :path => value })
-  end
-
-  def os_family
-    media_type ? media_type['os_family'] : nil
+    self.class.media_types.update(id, { :path => value })
   end
 
   def os_family=(value)
-    media_types.update(id, { :os_family => value })
+    self.class.media_types.update(id, { :os_family => value })
   end
 
 end

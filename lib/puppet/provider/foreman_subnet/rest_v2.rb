@@ -13,46 +13,81 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
     end
   end
 
-  def subnets
-    PuppetX::TheForeman::Resources::Subnets.new(resource)
+  mk_resource_methods
+
+  def initialize(value={})
+    super(value)
   end
 
-  def subnet
-    subnet = subnets.read
-    subnet['results'].each do |s|
-      if s['name'] == resource[:name]
-        @subnet = subnets.read(s['id'])
-        break
-      else
-        @subnet = nil
-      end
+  def self.subnets
+    PuppetX::TheForeman::Resources::Subnets.new(nil)
+  end
+
+  def self.domains
+    PuppetX::TheForeman::Resources::Domains.new(nil)
+  end
+
+  def self.smart_proxies
+    PuppetX::TheForeman::Resources::SmartProxy.new(nil)
+  end
+
+  def self.instances
+    subnet_config = subnets.read
+    subnet_config.collect do |s|
+      
+      subnet_hash = {
+        :name            => s['name'],
+        :id              => s['id'],
+        :ensure          => :present,
+        :network_address => s['network'],
+        :network_mask    => s['mask'],
+        :gateway_address => s['gateway'],
+        :primary_dns     => s['dns_primary'],
+        :secondary_dns   => s['dns_secondary'],
+        :start_ip_range  => s['from'],
+        :end_ip_range    => s['to'],
+        :vlan_id         => s['vlanid'],
+        :domains         => s['domains'] ? domain_names(s['domains']) : nil,
+        :dhcp_proxy      => s['dhcp'] ? s['dhcp']['name'] : nil,
+        :tftp_proxy      => s['tftp'] ? s['tftp']['name'] : nil,
+        :dns_proxy       => s['dns'] ? s['dns']['name'] : nil
+      }
+      new(subnet_hash)
     end
-    @subnet
+  end
+
+  def self.prefetch(resources)
+    subnets = instances
+    resources.keys.each do |subnet|
+      if provider = subnets.find { |s| s.name == subnet }
+       resources[subnet].provider = provider 
+      end
+    end 
   end
 
   def domain_lookup(names)
-    domain = PuppetX::TheForeman::Resources::Domains.new(resource).read
-    domains = []
+    domain = self.class.domains.read
+    domain_list = []
     names.each do |name|
       domain['results'].each do |d|
         if d['name'] == name
-          domains.push(d)
+          domain_list.push(d)
         end
       end
     end
-    return domains
+    return domain_list
   end
 
-  def domain_names(domains)
+  def self.domain_names(domain_arr)
     domain_list = []
-    domains.each do |d|
+    domain_arr.each do |d|
       domain_list.push(d['name'])
     end
     return domain_list
   end
 
   def proxy_lookup_id(name)
-    smartproxy = PuppetX::TheForeman::Resources::SmartProxy.new(resource).read
+    smartproxy = self.class.smart_proxies.read
     proxy = smartproxy['results'].find { |s| s['name'] == name }
     if proxy
       proxy['id']
@@ -61,150 +96,85 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
     end
   end
 
-  def proxy_name(proxy)
-    if proxy
-      proxy['name']
-    else
-      ''
-    end
-  end
-
-  def id
-    subnet ? subnet['id'] : nil
-  end
-
   def exists?
-    id != nil
+    @property_hash[:ensure] == :present
   end
 
   def create
-    subnet_hash = {
-      'name'         => resource[:name],
-      'network'      => resource[:network_address],
-      'mask'         => resource[:network_mask],
-      'gateway'      => resource[:gateway_address],
-      'dns_primary'  => resource[:primary_dns],
-      'dns_scondary' => resource[:secondary_dns],
-      'from'         => resource[:start_ip_range],
-      'to'           => resource[:end_ip_range],
-      'ipam'         => resource[:ipam],
-      'vlanid'       => resource[:vlan_id],
-      'domains'      => domain_lookup(resource[:domains]),
-      'dhcp_id'      => proxy_lookup_id(resource[:dhcp_proxy]),
-      'tftp_id'      => proxy_lookup_id(resource[:tftp_proxy]),
-      'dns_id'       => proxy_lookup_id(resource[:dns_proxy])
+    
+    subnet_hash = {  
+      'name'          => resource[:name],
+      'network'       => resource[:network_address],
+      'mask'          => resource[:network_mask],
+      'gateway'       => resource[:gateway_address],
+      'dns_primary'   => resource[:primary_dns],
+      'dns_secondary' => resource[:secondary_dns],
+      'from'          => resource[:start_ip_range],
+      'to'            => resource[:end_ip_range],
+      'vlanid'        => resource[:vlan_id],
+      'domains'       => domain_lookup(resource[:domains]),
+      'dhcp_id'       => proxy_lookup_id(resource[:dhcp_proxy]),
+      'tftp_id'       => proxy_lookup_id(resource[:tftp_proxy]),
+      'dns_id'        => proxy_lookup_id(resource[:dns_proxy])
     }
 
-    subnets.create(subnet_hash)
+    self.class.subnets.create(subnet_hash)
   end
 
   def destroy
-    subnets.delete(id)
-    @subnet = nil
+    self.class.subnets.delete(id)
   end
 
-  def network_address
-    subnet ? subnet['network'] : nil
+  def id
+    @property_hash[:id]
   end
 
   def network_address=(value)
-    subnets.update(id, { :network => value })
-  end
-
-  def network_mask
-    subnet ? subnet['mask'] : nil
+    self.class.subnets.update(id, { :network => value })
   end
 
   def network_mask=(value)
-    subnets.update(id, { :mask => value })
-  end
-
-  def gateway_address
-    subnet ? subnet['gateway'] : nil
+    self.subnets.update(id, { :mask => value })
   end
 
   def gateway_address=(value)
-    subnets.update(id, { :gateway => value })
-  end
-
-  def primary_dns
-    subnet ? subnet['dns_primary'] : nil
+    self.class.subnets.update(id, { :gateway => value })
   end
 
   def primary_dns=(value)
-    subnets.update(id, { :dns_primary => value })
-  end
-
-  def secondary_dns
-    subnet ? subnet['dns_secondary'] : nil
+    self.class.subnets.update(id, { :dns_primary => value })
   end
 
   def secondary_dns=(value)
-    subnets.update(id, { :dns_secondary => value })
-  end
-
-  def start_ip_range
-    subnet ? subnet['from'] : nil
+    self.class.subnets.update(id, { :dns_secondary => value })
   end
 
   def start_ip_range=(value)
-    subnets.update(id, { :from => value })
-  end
-
-  def end_ip_range
-    subnet ? subnet['to'] : nil
+    self.class.subnets.update(id, { :from => value })
   end
 
   def end_ip_range=(value)
-    subnets.update(id, { :to => value })
-  end
-
-  def ipam
-    subnet ? subnet['ipam'] : nil
-  end
-
-  def ipam=(value)
-    subnets.update(id, { :ipam => value })
-  end
-
-  def vlan_id
-    subnet ? subnet['vlanid'] : nil
+    self.class.subnets.update(id, { :to => value })
   end
 
   def vlan_id=(value)
-    subnets.update(id, { :vlanid => value })
-  end
-
-  def domains
-    subnet ? domain_names(subnet['domains']) : nil
+    self.class.subnets.update(id, { :vlanid => value })
   end
 
   def domains=(value)
-    subnets.update(id, { :domains => domain_lookup(value) })
-  end
-
-  def dhcp_proxy
-    subnet ? proxy_name(subnet['dhcp']) : nil
+    self.class.subnets.update(id, { :domains => domain_lookup(value) })
   end
 
   def dhcp_proxy=(value)
-    subnets.update(id, { :dhcp_id => proxy_lookup_id(value) })
+    self.class.subnets.update(id, { :dhcp_id => proxy_lookup_id(value) })
   end
-
-  def tftp_proxy
-    subnet ? proxy_name(subnet['tftp']) : nil
-  end
-
+  
   def tftp_proxy=(value)
-    subnets.update(id, { :tftp_id => proxy_lookup_id(value) })
-  end
-
-  def dns_proxy
-    subnet ? proxy_name(subnet['dns']) : nil
+    self.class.subnets.update(id, { :tftp_id => proxy_lookup_id(value) })
   end
 
   def dns_proxy=(value)
-    subnets.update(id, { :dns_id => proxy_lookup_id(value) })
+    self.class.subnets.update(id, { :dns_id => proxy_lookup_id(value) })
   end
 
 end
