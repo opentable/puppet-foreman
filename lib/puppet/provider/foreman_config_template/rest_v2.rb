@@ -70,7 +70,7 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
     os_array.each do |os|
       os_list.each do |fos|
         if os.eql?(fos['description'])
-          os_values.push(fos['id'])
+          os_values.push(fos)
         end
       end
     end
@@ -106,7 +106,7 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
     config_hash = { 'config_template' => {
         'name'               => resource[:name],
         'template'           => resource[:template],
-        'snippet'            => resource[:snippet],
+        'snippet'            => (resource[:snippet]  ? resource['snippet'] : 'false'),
         'template_kind_id'   => template_id(resource[:type]),
         'operatingsystems'   => os_lookup(resource[:operatingsystems])
       }
