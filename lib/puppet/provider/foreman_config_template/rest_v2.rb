@@ -30,11 +30,11 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
     config = config_templates.read
     config.collect do |s|
       template_hash = {
+        :id               => s['id'],
         :name             => s['name'],
         :ensure           => :present,
-        :id               => s['id'],
         :template         => s['template'],
-        :snippet          => s['snippet'],
+        :snippet          => (s['snippet'] ? s['snippet'] : 'false'),
         :type             => (s['template_kind_name'] ? s['template_kind_name'] : ''),
         :operatingsystems => (s['operatingsystems'] ? os_descriptions(s['operatingsystems']) : [])
       }
@@ -70,7 +70,7 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
     os_array.each do |os|
       os_list.each do |fos|
         if os.eql?(fos['description'])
-          os_values.push(fos)
+          os_values.push(fos['id'])
         end
       end
     end
@@ -103,13 +103,13 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
   end
 
   def create
-    config_hash = {
-      'name'               => resource[:name],
-      'template'           => resource[:template],
-      'snippet'            => resource[:snippet],
-      'template_kind_id'   => template_id(resource[:type]),
-      'template_kind_name' => resource[:type],
-      'operatingsystems'   => os_lookup(resource[:operatingsystems])
+    config_hash = { 'config_template' => {
+        'name'               => resource[:name],
+        'template'           => resource[:template],
+        'snippet'            => resource[:snippet],
+        'template_kind_id'   => template_id(resource[:type]),
+        'operatingsystems'   => os_lookup(resource[:operatingsystems])
+      }
     }
 
     self.class.config_templates.create(config_hash)
@@ -124,22 +124,22 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
   end
 
   def name=(value)
-    self.class.config_templates.update(id, { :name => value })
+    self.class.config_templates.update(id, { 'config_template' => { :name => value }})
   end
 
   def template=(value)
-    self.class.config_templates.update(id, { :template => value })
+    self.class.config_templates.update(id, { 'config_template' => { :template => value }})
   end
 
   def snippet=(value)
-    self.class.config_templates.update(id, { :snippet => value })
+    self.class.config_templates.update(id, { 'config_template' => { :snippet => value }})
   end
 
   def type=(value)
-    self.class.config_templates.update(id, { :template_kind_id => template_id(value), :template_kind_name => value })
+    self.class.config_templates.update(id, { 'config_template' => { :template_kind_id => template_id(value), :template_kind_name => value }})
   end
 
   def operatingsystems=(value)
-    self.class.config_templates.update(id, { :operatingsystems => os_lookup(value) })
+    self.class.config_templates.update(id, { 'config_template' => { :operatingsystems => os_lookup(value) }})
   end
 end

@@ -7,6 +7,7 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
       require 'puppet_x/theforeman/subnet'
       require 'puppet_x/theforeman/domain'
       require 'puppet_x/theforeman/smartproxy'
+      require 'puppet_x/theforeman/location'
       true
     rescue LoadError
       false
@@ -25,6 +26,10 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
 
   def self.domains
     PuppetX::TheForeman::Resources::Domains.new(nil)
+  end
+
+  def self.locations
+    PuppetX::TheForeman::Resources::Locations.new(nil)
   end
 
   def self.smart_proxies
@@ -48,6 +53,7 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
         :end_ip_range    => s['to'],
         :vlan_id         => s['vlanid'],
         :domains         => s['domains'] ? domain_names(s['domains']) : nil,
+        :locations       => s['locations'] ? location_names(s['locations']) : nil,
         :dhcp_proxy      => s['dhcp'] ? s['dhcp']['name'] : nil,
         :tftp_proxy      => s['tftp'] ? s['tftp']['name'] : nil,
         :dns_proxy       => s['dns'] ? s['dns']['name'] : nil
@@ -64,7 +70,9 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
       end
     end 
   end
-
+  
+  #read domains from /api/domains
+  #if the domain name from api matches local domain name push it out.
   def domain_lookup(names)
     domain = self.class.domains.read
     domain_list = []
@@ -78,12 +86,33 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
     return domain_list
   end
 
+  def location_lookup(names)
+    location = self.class.locations.read
+    location_list = []
+    names.each do |name|
+      location['results'].each do |l|
+        if l['name'] == name
+          location_list.push(l)
+        end
+      end
+    end
+    return location_list
+  end
+
   def self.domain_names(domain_arr)
     domain_list = []
     domain_arr.each do |d|
       domain_list.push(d['name'])
     end
     return domain_list
+  end
+
+  def self.location_names(location_arr)
+    location_list = []
+    location_arr.each do |l|
+      location_list.push(l['name'])
+    end
+    return location_list
   end
 
   def proxy_lookup_id(name)
@@ -113,6 +142,7 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
       'to'            => resource[:end_ip_range],
       'vlanid'        => resource[:vlan_id],
       'domains'       => domain_lookup(resource[:domains]),
+      'locations'     => location_lookup(resource[:locations]),
       'dhcp_id'       => proxy_lookup_id(resource[:dhcp_proxy]),
       'tftp_id'       => proxy_lookup_id(resource[:tftp_proxy]),
       'dns_id'        => proxy_lookup_id(resource[:dns_proxy])
@@ -163,6 +193,10 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
 
   def domains=(value)
     self.class.subnets.update(id, { :domains => domain_lookup(value) })
+  end
+
+  def locations=(value)
+    self.class.subnets.update(id, { :locations => location_lookup(value) })
   end
 
   def dhcp_proxy=(value)

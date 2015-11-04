@@ -15,6 +15,7 @@ module Resources
     def create(config_hash)
       post_data = config_hash.to_json
       request(:post, "#{base_url}/api/v2/config_templates", token, {}, post_data, headers)
+      $stdout.write "\n" + post_data + "\n"
     end
 
     def read
