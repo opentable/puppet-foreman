@@ -8,6 +8,7 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
       require 'puppet_x/theforeman/domain'
       require 'puppet_x/theforeman/smartproxy'
       require 'puppet_x/theforeman/location'
+      require 'puppet_x/theforeman/organization'
       true
     rescue LoadError
       false
@@ -32,6 +33,10 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
     PuppetX::TheForeman::Resources::Locations.new(nil)
   end
 
+  def self.organizations
+     PuppetX::TheForeman::Resources::Organizations.new(nil)
+  end
+
   def self.smart_proxies
     PuppetX::TheForeman::Resources::SmartProxy.new(nil)
   end
@@ -54,6 +59,7 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
         :vlan_id         => s['vlanid'],
         :domains         => s['domains'] ? domain_names(s['domains']) : nil,
         :locations       => s['locations'] ? location_names(s['locations']) : nil,
+        :organizations   => s['organizations'] ? organization_names(s['organizations']) : nil
         :dhcp_proxy      => s['dhcp'] ? s['dhcp']['name'] : nil,
         :tftp_proxy      => s['tftp'] ? s['tftp']['name'] : nil,
         :dns_proxy       => s['dns'] ? s['dns']['name'] : nil
@@ -99,6 +105,19 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
     return location_list
   end
 
+  def organization_lookup(names)
+  organization = self.class.organizations.read
+    organization_list = []
+    names.each do |name|
+      organization['results'].each do |l|
+        if l['name'] == name
+        organization_list.push(l)
+        end
+      end
+    end
+    return organization_list
+  end
+
   def self.domain_names(domain_arr)
     domain_list = []
     domain_arr.each do |d|
@@ -113,6 +132,14 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
       location_list.push(l['name'])
     end
     return location_list
+  end
+
+  def self.organization_names(organization_arr)
+    organization_list = []
+    organization_arr.each do |l|
+      organization_list.push(l['name'])
+    end
+    return organization_list
   end
 
   def proxy_lookup_id(name)
@@ -143,6 +170,7 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
       'vlanid'        => resource[:vlan_id],
       'domains'       => domain_lookup(resource[:domains]),
       'locations'     => location_lookup(resource[:locations]),
+      'organizations' => organization_lookup(resource[:organizations]),
       'dhcp_id'       => proxy_lookup_id(resource[:dhcp_proxy]),
       'tftp_id'       => proxy_lookup_id(resource[:tftp_proxy]),
       'dns_id'        => proxy_lookup_id(resource[:dns_proxy])
@@ -197,6 +225,10 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
 
   def locations=(value)
     self.class.subnets.update(id, { :locations => location_lookup(value) })
+  end
+
+  def organizations=(value)
+    self.class.subnets.update(id, { :organizations => organization_lookup(value) })
   end
 
   def dhcp_proxy=(value)

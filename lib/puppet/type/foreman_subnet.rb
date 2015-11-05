@@ -58,6 +58,11 @@ Puppet::Type.newtype(:foreman_subnet) do
     defaultto []
   end
 
+  newproperty(:organizations, :array_matching => :all) do
+    desc ''
+    defaultto []
+  end
+
   newproperty(:dhcp_proxy) do
     desc ''
     defaultto ''

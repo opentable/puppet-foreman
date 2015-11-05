@@ -34,6 +34,10 @@ module Resources
     def update(id, config_hash)
       post_data = config_hash.to_json
       request(:put, "#{base_url}/api/v2/config_templates/#{id}", token, {}, post_data, headers)
+      puts "\n this is the posted json for an update:"
+      puts "posting to: #{base_url}/api/v2/config_templates/#{id}"
+      puts post_data
+      puts "\n\n"
     end
 
     def delete(id)
