@@ -59,7 +59,7 @@ Puppet::Type.type(:foreman_subnet).provide(:rest) do
         :vlan_id         => s['vlanid'],
         :domains         => s['domains'] ? domain_names(s['domains']) : nil,
         :locations       => s['locations'] ? location_names(s['locations']) : nil,
-        :organizations   => s['organizations'] ? organization_names(s['organizations']) : nil
+        :organizations   => s['organizations'] ? organization_names(s['organizations']) : nil,
         :dhcp_proxy      => s['dhcp'] ? s['dhcp']['name'] : nil,
         :tftp_proxy      => s['tftp'] ? s['tftp']['name'] : nil,
         :dns_proxy       => s['dns'] ? s['dns']['name'] : nil

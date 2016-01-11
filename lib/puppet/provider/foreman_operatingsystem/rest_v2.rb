@@ -40,7 +40,6 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
         :architectures        => s['architectures'] ? resource_names(s['architectures']) : nil,
         :media                => s['media'] ? resource_names(s['media']) : nil,
         :ptables              => s['ptables'] ? resource_names(s['ptables']) : nil,
-        :os_default_templates => s['config_templates'] ? resource_names(s['config_templates']) : nil
       }
       new(os_hash)
     end
@@ -76,18 +75,37 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
     return architectures
   end
 
-  def media_lookup(names)
-    mediatypes = []
+#  def media_lookup(names)
+#    mediatypes = []
+#    media = PuppetX::TheForeman::Resources::MediaTypes.new(resource).read
+#    media['results'].each do |result|
+#      names.each do |name|
+#        if result['name'].eql?(name)
+#          mediatypes.push(result)
+#        end
+#      end
+#    end
+#    return mediatypes
+#  end
+#
+  def mediaid_lookup(media_name_array)
+    mediaids = []
+    #look up the media from puppet_x
     media = PuppetX::TheForeman::Resources::MediaTypes.new(resource).read
+    #for each result from the lookup, do test on the result
     media['results'].each do |result|
-      names.each do |name|
+      #for each name in the array from puppet manifest test name
+      media_name_array.each do |name|
+        #if the result name from the puppet_x lookup matches the name from the manifest array
         if result['name'].eql?(name)
-          mediatypes.push(result)
+          #push
+          mediaids.push(result['id'])
         end
       end
     end
-    return mediatypes
+    return mediaids
   end
+
 
   def ptable_lookup(names)
     ptables = []
@@ -108,50 +126,6 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
     }
   end
 
-  #def os_templates_id(name)
-  #  od_id = nil
-  #  os_template = PuppetX::TheForeman::Resources::ConfigTemplates.new(resource).read
-  #  os_template['results'].each do |result|
-  #    if result['name'].eql?(name)
-  #      os_id = result['id']
-  #    end
-  #  end
-  #  return od_id
-  #end
-  
-  #def os_default_templates_update(names)
-  #  os_template = PuppetX::TheForeman::Resources::OSDefaultTemplates.new(nil)
-  #  names.each_with_index do |name,index|
-  #			config_template = os_templates_lookup([name])[0]
-	#		if config_template
-  #      ct_id = config_template['id']
-  #      ct_kind_id = config_template['template_kind_id']
-  #
-  #      template_hash = {
-  #        'os_default_template' => {
-  #          'template_kind_id' => ct_kind_id,
-  #          'config_template_id' => ct_id
-  #        }
-  #      }
-  #
-  #      results = os_template.read(id)['results']
-  #      if results.empty?
-  #        os_template.create(id, template_hash)
-  #      else
-  #        results.each do |result|
-  #          if result['config_template_name'].eql?(name)
-  #            # TODO: os_template.update
-  #          else
-  # 	          os_template.create(id, template_hash)
-  #          end
-  #        end
-  #      end
- # 			else
-  #				return nil
-	#		end
-  #  end
-  #end
-
   def os_templates_lookup(names)
     os_templates = []
     os_template = PuppetX::TheForeman::Resources::ConfigTemplates.new(nil).read
@@ -167,7 +141,6 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
   end
 
   def os_template_update(names)
-    #os_template = PuppetX::TheForeman::Resources::OSDefaultTemplates.new(nil)
     config_templates = os_templates_lookup(names)
     template_list = []
     config_templates.each do |template|
@@ -177,7 +150,6 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
       }
       template_list.push(default_template_hash)
     end
-    self.class.operatingsystems.update(id, os_hash({ :os_default_template => template_list }))
     self.class.operatingsystems.update(id, os_hash({ :config_templates => template_list }))
   end
 
@@ -190,16 +162,17 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
   end
 
   def create
-    os_hash = {
+    os_hash = {"operatingsystem" => {
       'description'   => resource[:name],
       'major'         => resource[:major_version],
       'minor'         => resource[:minor_version],
       'name'          => resource[:osname],
       'release_name'  => resource[:release_name]
+      }
     }
 
     os_hash['architectures'] = architecture_lookup(resource[:architectures]) if !resource[:architectures].empty?
-    os_hash['media']         = media_lookup(resource[:media]) if !resource[:media].empty?
+    os_hash['media']         = mediaid_lookup(resource[:id]) if !resource[:id].empty?
     os_hash['ptables']       = ptable_lookup(resource[:ptables]) if !resource[:ptables].empty?
     os_hash['family']        = resource[:osfamily] if !resource[:osfamily]
 
@@ -215,58 +188,50 @@ Puppet::Type.type(:foreman_operatingsystem).provide(:rest) do
   end
 
   def architectures=(value)
-    self.class.operatingsystems.update(id, { :architectures => architecture_lookup(value) })
+    self.class.operatingsystems.update(id, {"operatingsystem" => { :architectures => architecture_lookup(value) }})
   end
 
   def media=(value)
-    self.class.operatingsystems.update(id, { :media => media_lookup(value) })
+    self.class.operatingsystems.update(id, {"operatingsystem" => { :medium_ids => mediaid_lookup(value) }})
   end
 
   def ptables=(value)
-    self.class.operatingsystems.update(id, { :ptables => ptable_lookup(value) })
-  end
-
-  def os_default_templates=(value)
-    os_template_update(value)
+    self.class.operatingsystems.update(id, {"operatingsystem" => { :ptables => ptable_lookup(value) }})
   end
 
   def name=(value)
-    self.class.operatingsystems.update(id, { :description => value })
+    self.class.operatingsystems.update(id, {"operatingsystem" => { :description => value }})
   end
 
   def osname=(value)
-    self.class.operatingsystems.update(id, { :name => value })
+    self.class.operatingsystems.update(id, {"operatingsystem" => { :name => value }})
   end
 
   def major_version=(value)
-    self.class.operatingsystems.update(id, { :major => value })
+    self.class.operatingsystems.update(id, {"operatingsystem" => { :major => value }})
   end
 
   def minor_version=(value)
-    self.class.operatingsystems.update(id, { :minor => value })
+    self.class.operatingsystems.update(id, {"operatingsystem" => { :minor => value }})
   end
 
   def os_family=(value)
-    self.class.operatingsystems.update(id, { :family => value })
+    self.class.operatingsystems.update(id, {"operatingsystem" => { :family => value }})
   end
 
   def release_name=(value)
-    self.class.operatingsystems.update(id, { :release_name => value })
+    self.class.operatingsystems.update(id, {"operatingsystem" => { :release_name => value }})
   end
 
-  def architectures=(value)
-    self.class.operatingsystems.update(id, { :architectures => value })
-  end
+ # def architectures=(value)
+ #   self.class.operatingsystems.update(id, { :architectures => value })
+ # end
 
-  def media=(value)
-    self.class.operatingsystems.update(id, { :media => value })
-  end
+  #def media=(value)
+  #  self.class.operatingsystems.update(id, { :media => value })
+  #end
 
-  def ptables=(value)
-    self.class.operatingsystems.update(id, { :ptables => value })
-  end
-
-  def os_default_templates=(value)
-    self.class.operatingsystems.update(id, { :os_default_templates => value })
-  end
+  #def ptables=(value)
+  #  self.class.operatingsystems.update(id, { :ptables => value })
+  #end
 end

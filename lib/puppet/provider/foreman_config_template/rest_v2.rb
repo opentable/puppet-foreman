@@ -64,13 +64,29 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
     return names.sort!
   end
 
+  def self.os_id(os_array)
+    names = []
+    os_list = operating_systems.read
+    os_array.each do |os|
+      os_list.each do |fos|
+        if os['id'].eql?(fos['id'])
+          names.push(fos['description'])
+        end
+      end
+    end
+    return names.sort!
+  end
+
   def os_lookup(os_array)
     os_values = []
     os_list = self.class.operating_systems.read
     os_array.each do |os|
       os_list.each do |fos|
         if os.eql?(fos['description'])
-          os_values.push(fos)
+          os_values.push(fos['id'])
+          puts "\n\n fos.id is: "
+          puts fos['id'] 
+          puts "::end::"
         end
       end
     end
@@ -140,6 +156,6 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
   end
 
   def operatingsystems=(value)
-    self.class.config_templates.update(id, { 'config_template' => { :operatingsystems => os_lookup(value) }})
+    self.class.config_templates.update(id, { 'config_template' => { :operatingsystem_ids => os_lookup(value) }})
   end
 end

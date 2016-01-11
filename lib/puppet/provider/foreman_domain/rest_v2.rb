@@ -70,6 +70,7 @@ Puppet::Type.type(:foreman_domain).provide(:rest) do
     domain_hash = {
       'name'     => resource[:name],
       'fullname' => resource[:description],
+      'dns_id'   => smartproxy_lookup_id(resource[:dns_proxy])
     }
 
     dns = self.class.smartproxy_lookup(resource[:dns_proxy])
