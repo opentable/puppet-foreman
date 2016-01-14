@@ -53,4 +53,13 @@ Puppet::Type.newtype(:foreman_operatingsystem) do
     defaultto []
   end
 
+#  newproperty(:os_default_templates, :array_matching => :all) do
+#    desc ''
+#    defaultto []
+#
+#    def insync?(is)
+#      is.sort == should.sort
+#    end
+#  end
+
 end
