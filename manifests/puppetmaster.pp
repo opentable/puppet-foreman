@@ -1,20 +1,21 @@
 # This class includes the necessary scripts for Foreman on the puppetmaster and
 # is intented to be added to your puppetmaster
 class foreman::puppetmaster (
-  $foreman_url      = $foreman::params::foreman_url,
-  $foreman_user     = $foreman::params::foreman_user,
-  $foreman_password = $foreman::params::foreman_password,
-  $reports          = $foreman::params::reports,
-  $enc              = $foreman::params::enc,
-  $receive_facts    = $foreman::params::receive_facts,
-  $puppet_home      = $foreman::params::puppet_home,
-  $puppet_user      = $foreman::params::puppet_user,
-  $puppet_group     = $foreman::params::puppet_group,
-  $puppet_basedir   = $foreman::params::puppet_basedir,
-  $timeout          = $foreman::params::puppetmaster_timeout,
-  $ssl_ca           = $foreman::params::client_ssl_ca,
-  $ssl_cert         = $foreman::params::client_ssl_cert,
-  $ssl_key          = $foreman::params::client_ssl_key,
+  $foreman_url      = $::foreman::params::foreman_url,
+  $foreman_user     = $::foreman::params::foreman_user,
+  $foreman_password = $::foreman::params::foreman_password,
+  $reports          = $::foreman::params::reports,
+  $enc              = $::foreman::params::enc,
+  $receive_facts    = $::foreman::params::receive_facts,
+  $puppet_home      = $::foreman::params::puppet_home,
+  $puppet_user      = $::foreman::params::puppet_user,
+  $puppet_group     = $::foreman::params::puppet_group,
+  $puppet_basedir   = $::foreman::params::puppet_basedir,
+  $puppet_etcdir    = $::foreman::params::puppet_etcdir,
+  $timeout          = $::foreman::params::puppetmaster_timeout,
+  $ssl_ca           = $::foreman::params::client_ssl_ca,
+  $ssl_cert         = $::foreman::params::client_ssl_cert,
+  $ssl_key          = $::foreman::params::client_ssl_key,
   $enc_api          = 'v2',
   $report_api       = 'v2',
 ) inherits foreman::params {
@@ -28,7 +29,7 @@ class foreman::puppetmaster (
     ensure  => installed,
   }
 
-  file {'/etc/puppet/foreman.yaml':
+  file {"${puppet_etcdir}/foreman.yaml":
     content => template("${module_name}/puppet.yaml.erb"),
     mode    => '0640',
     owner   => 'root',
@@ -44,14 +45,14 @@ class foreman::puppetmaster (
     file {"${puppet_basedir}/reports/foreman.rb":
       mode    => '0644',
       owner   => 'root',
-      group   => 'root',
+      group   => '0',
       source  => "puppet:///modules/${module_name}/foreman-report_${report_api}.rb",
       require => Exec['Create Puppet Reports dir'],
     }
   }
 
   if $enc {
-    file { '/etc/puppet/node.rb':
+    file { "${puppet_etcdir}/node.rb":
       source => "puppet:///modules/${module_name}/external_node_${enc_api}.rb",
       mode   => '0550',
       owner  => $puppet_user,
@@ -62,6 +63,7 @@ class foreman::puppetmaster (
       ensure                  => directory,
       owner                   => $puppet_user,
       group                   => $puppet_group,
+      mode                    => '0750',
       selinux_ignore_defaults => true,
     }
 

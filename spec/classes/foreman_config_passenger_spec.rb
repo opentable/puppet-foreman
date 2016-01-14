@@ -46,7 +46,7 @@ describe 'foreman::config::passenger' do
         :prestart      => true,
         :min_instances => '1',
         :start_timeout => '600',
-        :ruby          => '/usr/bin/ruby193-ruby'
+        :ruby          => '/usr/bin/tfm-ruby'
       } end
 
       it 'should contain the docroot' do
@@ -78,7 +78,7 @@ describe 'foreman::config::passenger' do
           :passenger_min_instances => '1',
           :passenger_pre_start     => "http://#{facts[:fqdn]}",
           :passenger_start_timeout => '600',
-          :passenger_ruby          => "/usr/bin/ruby193-ruby",
+          :passenger_ruby          => "/usr/bin/tfm-ruby",
           :custom_fragment         => %r{^<Directory #{params[:app_root]}/public>$},
         })
       end
@@ -96,7 +96,7 @@ describe 'foreman::config::passenger' do
           :passenger_min_instances => '1',
           :passenger_pre_start     => "https://#{facts[:fqdn]}",
           :passenger_start_timeout => '600',
-          :passenger_ruby          => "/usr/bin/ruby193-ruby",
+          :passenger_ruby          => "/usr/bin/tfm-ruby",
           :ssl                     => true,
           :ssl_cert                => params[:ssl_cert],
           :ssl_key                 => params[:ssl_key],
@@ -104,7 +104,7 @@ describe 'foreman::config::passenger' do
           :ssl_ca                  => params[:ssl_ca],
           :ssl_crl                 => params[:ssl_crl],
           :ssl_verify_client       => 'optional',
-          :ssl_options             => '+StdEnvVars',
+          :ssl_options             => '+StdEnvVars +ExportCertData',
           :ssl_verify_depth        => '3',
           :ssl_crl_check           => 'chain',
           :custom_fragment         => %r{^<Directory #{params[:app_root]}/public>$},
@@ -124,7 +124,7 @@ describe 'foreman::config::passenger' do
         :prestart      => true,
         :min_instances => '1',
         :start_timeout => '600',
-        :ruby          => '/usr/bin/ruby193-ruby'
+        :ruby          => '/usr/bin/tfm-ruby'
       } end
 
       it do
@@ -146,7 +146,7 @@ describe 'foreman::config::passenger' do
         :prestart      => true,
         :min_instances => '1',
         :start_timeout => '600',
-        :ruby          => '/usr/bin/ruby193-ruby'
+        :ruby          => '/usr/bin/tfm-ruby'
       } end
 
       it do

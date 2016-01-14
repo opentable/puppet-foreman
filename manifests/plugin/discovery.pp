@@ -15,22 +15,23 @@
 # $image_name::      tarball with images
 #
 class foreman::plugin::discovery (
-  $install_images = $foreman::plugin::discovery::params::install_images,
-  $tftp_root      = $foreman::plugin::discovery::params::tftp_root,
-  $source_url     = $foreman::plugin::discovery::params::source_url,
-  $image_name     = $foreman::plugin::discovery::params::image_name,
+  $install_images = $::foreman::plugin::discovery::params::install_images,
+  $tftp_root      = $::foreman::plugin::discovery::params::tftp_root,
+  $source_url     = $::foreman::plugin::discovery::params::source_url,
+  $image_name     = $::foreman::plugin::discovery::params::image_name,
 ) inherits foreman::plugin::discovery::params {
 
-  $tftp_root_clean = regsubst($tftp_root, '/$', '')
   validate_bool($install_images)
-  validate_absolute_path($tftp_root_clean)
-  validate_string($source_url)
-  validate_string($image_name)
 
   foreman::plugin {'discovery':
   }
 
   if $install_images {
+    $tftp_root_clean = regsubst($tftp_root, '/$', '')
+    validate_absolute_path($tftp_root_clean)
+    validate_string($source_url)
+    validate_string($image_name)
+
     foreman::remote_file {"${tftp_root_clean}/boot/${image_name}":
       remote_location => "${source_url}${image_name}",
       mode            => '0644',

@@ -12,12 +12,12 @@ classes, extra compute resource support via `foreman::compute::*` classes and
 the Hammer CLI can be installed by adding `foreman::cli`.
 
 By default, it configures Foreman to run under Apache and Passenger plus
-with a PostgreSQL database.  A standalone service can be configured instead by
+with a PostgreSQL database. A standalone service can be configured instead by
 setting `passenger` to false, though this isn't recommended in production.
 
 The web interface is configured to use Puppet's SSL certificates by default, so
 ensure they're present first, reconfigure `server_ssl_*` or disable the `ssl`
-parameter.  When used with the 'puppet' module, it will generate a new CA and
+parameter. When used with the 'puppet' module, it will generate a new CA and
 the required certificate.
 
 Lots of parameters are supplied to tune the default installation, which may be
@@ -30,22 +30,37 @@ to configure Foreman's Smart Proxy and related services.
 ## Database support
 
 This module supports configuration of either SQLite, PostgreSQL or MySQL as the
-database for Foreman.  The database type can be changed using the `db_type`
+database for Foreman. The database type can be changed using the `db_type`
 parameter, or management disabled with `db_manage`.
 
 The default database is PostgreSQL, which will be fully installed and managed
-on the host this module is applied to.  If using MySQL, the puppetlabs-mysql
+on the host this module is applied to. If using MySQL, the puppetlabs-mysql
 module must be added to the modulepath, otherwise it's not required.
 
 ## Support policy
 
 At any time, the module supports two releases, however the previous version
-may require parameters to be changed from their default values.  These should
+may require parameters to be changed from their default values. These should
 be noted below.
 
 Thus 'master' will support the upcoming major version and the current stable.
 The latest release (git tag, Puppet Forge) should support current and the
 previous stable release.
+
+### Foreman 1.8/1.9 compatibility notes
+
+On EL or Amazon, set:
+
+    passenger_ruby         => '/usr/bin/ruby193-ruby',
+    passenger_ruby_package => 'ruby193-rubygem-passenger-native',
+    plugin_prefix          => 'ruby193-rubygem-foreman_',
+
+If using `foreman::plugin::ovirt_provision`, puppetdb or tasks, also set the
+`package` parameter as appropriate to:
+
+    ruby193-rubygem-foreman-tasks
+    ruby193-rubygem-ovirt_provision_plugin
+    ruby193-rubygem-puppetdb_foreman
 
 ### Foreman 1.7 compatibility notes
 

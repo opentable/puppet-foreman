@@ -24,9 +24,7 @@ describe 'foreman::config' do
       end
 
       it 'should set up the config' do
-        should contain_concat_build('foreman_settings').with_order(['*.yaml'])
-
-        should contain_concat_fragment('foreman_settings+01-header.yaml').
+        should contain_concat__fragment('foreman_settings+01-header.yaml').
           with_content(/^:unattended:\s*true$/).
           with_content(/^:login:\s*true$/).
           with_content(/^:require_ssl:\s*true$/).
@@ -36,16 +34,9 @@ describe 'foreman::config' do
           with_content(/^:oauth_map_users:\s*false$/).
           with_content(/^:oauth_consumer_key:\s*\w+$/).
           with_content(/^:oauth_consumer_secret:\s*\w+$/).
+          with_content(/^:websockets_encrypt:\s*on$/).
+          with_content(/^:logging:\n\s*:level:\s*info$/).
           with({})
-
-        should contain_file('/etc/foreman/settings.yaml').with({
-          'source'  => %r{/concat_native/output/foreman_settings.out$},
-          'require' => 'Concat_build[foreman_settings]',
-          'owner'   => 'root',
-          'group'   => 'foreman',
-          'mode'    => '0640',
-        })
-      end
 
       it 'should configure the database' do
         should contain_file('/etc/foreman/database.yml').with({
@@ -85,7 +76,7 @@ describe 'foreman::config' do
       it 'should contain foreman::config::passenger' do
         should contain_class('foreman::config::passenger').
           with_listen_on_interface(nil).
-          with_ruby('/usr/bin/ruby193-ruby').
+          with_ruby('/usr/bin/tfm-ruby').
           that_comes_before('Anchor[foreman::config_end]')
       end
 
@@ -130,7 +121,7 @@ describe 'foreman::config' do
       end
 
       it 'should have changed parameters' do
-        should contain_concat_fragment('foreman_settings+01-header.yaml').
+        should contain_concat__fragment('foreman_settings+01-header.yaml').
           with_content(/^:unattended:\s*false$/).
           with_content(/^:login:\s*false$/).
           with_content(/^:require_ssl:\s*false$/).
@@ -195,6 +186,65 @@ describe 'foreman::config' do
         should contain_file('/etc/foreman/database.yml').with_content(/adapter: mysql2/)
       end
     end
+<<<<<<< HEAD
+=======
+
+    describe 'with loggers' do
+      let :pre_condition do
+        "class { 'foreman':
+          loggers => {'ldap' => true},
+        }"
+      end
+
+      it 'should set loggers config' do
+        should contain_concat__fragment('foreman_settings+01-header.yaml').
+          with_content(/^:loggers:\n\s+:ldap:\n\s+:enabled:\s*true$/)
+      end
+    end
+
+    describe 'with email configured for SMTP' do
+      let :pre_condition do
+        "class {'foreman':
+           email_delivery_method => 'smtp',
+         }"
+      end
+
+      it 'should contain email.yaml with SMTP set' do
+        should contain_file('/etc/foreman/email.yaml').
+          with_content(/delivery_method: :smtp/).
+          with_ensure('file')
+      end
+    end
+
+    describe 'with email configured and authentication set to login' do
+      let :pre_condition do
+        "class {'foreman':
+          email_delivery_method => 'smtp',
+          email_smtp_authentication => 'login',
+        }"
+      end
+
+      it 'should contain email.yaml with login authentication' do
+        should contain_file('/etc/foreman/email.yaml').
+          with_content(/authentication: :login/).
+          with_ensure('file')
+      end
+    end
+
+    describe 'with email configured for sendmail' do
+      let :pre_condition do
+        "class {'foreman':
+          email_delivery_method => 'sendmail',
+        }"
+      end
+
+      it 'should contain email.yaml with sendmail' do
+        should contain_file('/etc/foreman/email.yaml').
+          with_content(/delivery_method: :sendmail/).
+          with_ensure('file')
+      end
+    end
+>>>>>>> upstream/5.0-stable
   end
 
   context 'on debian' do
@@ -212,9 +262,7 @@ describe 'foreman::config' do
       end
 
       it 'should set up settings.yaml' do
-        should contain_concat_build('foreman_settings').with_order(['*.yaml'])
-
-        should contain_concat_fragment('foreman_settings+01-header.yaml').
+        should contain_concat__fragment('foreman_settings+01-header.yaml').
           with_content(/^:unattended:\s*true$/).
           with_content(/^:login:\s*true$/).
           with_content(/^:require_ssl:\s*true$/).
@@ -224,11 +272,17 @@ describe 'foreman::config' do
           with_content(/^:oauth_map_users:\s*false$/).
           with_content(/^:oauth_consumer_key:\s*\w+$/).
           with_content(/^:oauth_consumer_secret:\s*\w+$/).
+          with_content(/^:websockets_encrypt:\s*on$/).
+          with_content(/^:logging:\n\s*:level:\s*info$/).
           with({})
 
+<<<<<<< HEAD
         should contain_file('/etc/foreman/settings.yaml').with({
           'source'  => %r{/concat_native/output/foreman_settings.out$},
           'require' => 'Concat_build[foreman_settings]',
+=======
+        should contain_concat('/etc/foreman/settings.yaml').with({
+>>>>>>> upstream/5.0-stable
           'owner'   => 'root',
           'group'   => 'foreman',
           'mode'    => '0640',
