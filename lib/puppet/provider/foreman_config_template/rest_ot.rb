@@ -57,7 +57,7 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
     os_array.each do |os|
       os_list.each do |fos|
         if os['id'].eql?(fos['id'])
-          names.push(fos['description'])
+          names.push(fos['title'])
         end
       end
     end
@@ -70,7 +70,7 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
     os_array.each do |os|
       os_list.each do |fos|
         if os['id'].eql?(fos['id'])
-          names.push(fos['description'])
+          names.push(fos['title'])
         end
       end
     end
@@ -82,11 +82,11 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
     os_list = self.class.operating_systems.read
     os_array.each do |os|
       os_list.each do |fos|
-        if os.eql?(fos['description'])
+        if os.eql?(fos['title'])
           os_values.push(fos['id'])
-          puts "\n\n fos.id is: "
-          puts fos['id'] 
-          puts "::end::"
+          #puts "\n\n fos.id is: "
+          #puts fos['id'] 
+          #puts "::end::"
         end
       end
     end
@@ -97,13 +97,14 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
   def template_id(name)
     templates = [
       { :id => 1, :name => 'PXELinux'},
-      { :id => 2, :name => 'PXEGrub'},
-      { :id => 3, :name => 'iPXE'},
-      { :id => 4, :name => 'provision'},
-      { :id => 5, :name => 'finish'},
-      { :id => 6, :name => 'script'},
+      { :id => 2, :name => 'iPXE'},
+      { :id => 3, :name => 'provision'},
+      { :id => 4, :name => 'finish'},
+      { :id => 5, :name => 'script'},
+      { :id => 6, :name => 'PXEGrub'},
       { :id => 7, :name => 'user_data'},
-      { :id => 8, :name => 'ZTP'}
+      { :id => 8, :name => 'ZTP'},
+      { :id => 9, :name => 'POAP'}
     ]
     
     if !name.eql?('')
@@ -124,7 +125,7 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
         'template'           => resource[:template],
         'snippet'            => (resource[:snippet]  ? resource['snippet'] : 'false'),
         'template_kind_id'   => template_id(resource[:type]),
-        'operatingsystems'   => os_lookup(resource[:operatingsystems])
+        'operatingsystem_ids'   => os_lookup(resource[:operatingsystems])
       }
     }
 
@@ -152,7 +153,7 @@ Puppet::Type.type(:foreman_config_template).provide(:rest) do
   end
 
   def type=(value)
-    self.class.config_templates.update(id, { 'config_template' => { :template_kind_id => template_id(value), :template_kind_name => value }})
+    self.class.config_templates.update(id, { 'config_template' => { :template_kind_id => template_id(value)}})
   end
 
   def operatingsystems=(value)
