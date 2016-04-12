@@ -16,7 +16,6 @@ class foreman::service(
     $service_ensure = 'stopped'
     $service_enabled = false
   }
-  }
 
   service {'foreman':
     ensure    => $service_ensure,
