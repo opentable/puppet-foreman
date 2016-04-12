@@ -19,6 +19,10 @@
 # $passenger_ruby_package::     Package to install to provide Passenger libraries for the active Ruby
 #                               interpreter
 #
+# $service_ensure::             option to set if foreman should be running. options 'running' 'stopped'
+#
+# $service_enabled::            Option to set defaults for starting foreman. Options are true and false
+#
 # $plugin_prefix::              String which is prepended to the plugin package names
 #
 # $use_vhost::                  Enclose apache configuration in <VirtualHost>...</VirtualHost>
@@ -197,6 +201,8 @@ class foreman (
   $passenger                 = $::foreman::params::passenger,
   $passenger_ruby            = $::foreman::params::passenger_ruby,
   $passenger_ruby_package    = $::foreman::params::passenger_ruby_package,
+  $service_ensure            = $::foreman::params::service_ensure,
+  $service_enabled           = $::foreman::params::service_enabled,
   $plugin_prefix             = $::foreman::params::plugin_prefix,
   $use_vhost                 = $::foreman::params::use_vhost,
   $servername                = $::foreman::params::servername,
