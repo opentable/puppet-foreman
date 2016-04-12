@@ -2,8 +2,8 @@
 class foreman::service(
   $passenger = $::foreman::passenger,
   $app_root  = $::foreman::app_root,
-  $service_ensure = $::foreman::$service_ensure,
-  $service_enabled = $::foreman::$service_enabled,
+  $service_ensure = $::foreman::service_ensure,
+  $service_enabled = $::foreman::service_enabled,
 ) {
   if $passenger {
     exec {'restart_foreman':
