@@ -38,6 +38,10 @@ class foreman::params {
   $locations_enabled     = false
   $organizations_enabled = false
 
+  # service aparameters fpr foreman when running external http engine (puma,etc) 
+  $service_ensure = 'running'
+  $service_enabled = true
+
   # Additional software repos
   $configure_epel_repo      = ($::osfamily == 'RedHat' and $::operatingsystem != 'Fedora')
   # Only configure extra SCL repos on EL

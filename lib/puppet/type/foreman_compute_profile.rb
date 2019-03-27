@@ -1,6 +1,6 @@
 require 'uri'
 
-Puppet::Type.newtype(:foreman_smartproxy) do
+Puppet::Type.newtype(:foreman_compute_profile) do
 
   ensurable
 
@@ -8,9 +8,9 @@ Puppet::Type.newtype(:foreman_smartproxy) do
     desc ''
   end
 
-  newproperty(:url) do
+  newparam(:compute_attributes) do
     desc ''
-    defaultto ''
+    defaultto {}
   end
 
 end
