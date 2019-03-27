@@ -34,8 +34,10 @@ database for Foreman. The database type can be changed using the `db_type`
 parameter, or management disabled with `db_manage`.
 
 The default database is PostgreSQL, which will be fully installed and managed
-on the host this module is applied to. If using MySQL, the puppetlabs-mysql
-module must be added to the modulepath, otherwise it's not required.
+on the host this module is applied to. Databases will be created with using the
+`en_US.utf8` locale, which means a respective OS locale must be available on
+the database host. If using MySQL, the puppetlabs-mysql module must be added to
+the modulepath, otherwise it's not required.
 
 ## Support policy
 
@@ -47,27 +49,28 @@ Thus 'master' will support the upcoming major version and the current stable.
 The latest release (git tag, Puppet Forge) should support current and the
 previous stable release.
 
-### Foreman 1.8/1.9 compatibility notes
+### Foreman version compatibility notes
 
-On EL or Amazon, set:
+For Foreman 1.16 or older, please set the `dynflow_in_core` parameter to false.
+For Foreman 1.11 or older, please use the 5.x release series of this module.
 
-    passenger_ruby         => '/usr/bin/ruby193-ruby',
-    passenger_ruby_package => 'ruby193-rubygem-passenger-native',
-    plugin_prefix          => 'ruby193-rubygem-foreman_',
+## Types and providers
 
-If using `foreman::plugin::ovirt_provision`, puppetdb or tasks, also set the
-`package` parameter as appropriate to:
+`foreman_config_entry` can be used to manage settings in Foreman's database, as
+seen in _Administer > Settings_. Provides:
 
-    ruby193-rubygem-foreman-tasks
-    ruby193-rubygem-ovirt_provision_plugin
-    ruby193-rubygem-puppetdb_foreman
+* `cli` provider uses `foreman-rake` to change settings (default)
 
-### Foreman 1.7 compatibility notes
+`foreman_hostgroup` can create and manage host group in Foreman's database.
+Providers:
 
-* set `apipie_task => 'apipie:cache'` as Foreman 1.7 packages didn't have
-  precompiled API docs
-* `foreman::compute::ec2` needs `package => 'foreman-compute'` on Foreman 1.7,
-  as the package has been renamed in newer versions.
+* `rest_v2` provider uses API v2 with apipie-bindings and OAuth (default)
+
+`foreman_smartproxy` can create and manage registered smart proxies in
+Foreman's database. Providers:
+
+* `rest_v3` provider uses API v2 with Ruby HTTP library, OAuth and JSON (default)
+* `rest_v2` provider uses API v2 with apipie-bindings and OAuth
 
 # Contributing
 

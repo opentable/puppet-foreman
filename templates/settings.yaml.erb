@@ -4,10 +4,15 @@
 <%= @header %>
 
 :unattended: <%= scope.lookupvar("foreman::unattended") %>
+<% unless [nil, :undefined, :undef].include?(scope.lookupvar("foreman::unattended_url")) -%>
+:unattended_url: <%= scope.lookupvar("foreman::unattended_url") %>
+<% end -%>
 :login: <%= scope.lookupvar("foreman::authentication") %>
 :require_ssl: <%= scope.lookupvar("foreman::ssl") %>
 :locations_enabled: <%= scope.lookupvar("foreman::locations_enabled") %>
 :organizations_enabled: <%= scope.lookupvar("foreman::organizations_enabled") %>
+:puppetrun: <%= scope.lookupvar("foreman::puppetrun") %>
+:puppetssldir: <%= scope.lookupvar("foreman::puppet_ssldir") %>
 
 # The following values are used for providing default settings during db migrate
 :oauth_active: <%= scope.lookupvar("foreman::oauth_active") %>
@@ -20,10 +25,21 @@
 :websockets_ssl_key: <%= scope.lookupvar("foreman::websockets_ssl_key") %>
 :websockets_ssl_cert: <%= scope.lookupvar("foreman::websockets_ssl_cert") %>
 
+# SSL-settings
+:ssl_certificate: <%= scope.lookupvar("foreman::client_ssl_cert") %>
+:ssl_ca_file: <%= scope.lookupvar("foreman::client_ssl_ca") %>
+:ssl_priv_key: <%= scope.lookupvar("foreman::client_ssl_key") %>
+
+# HSTS setting
+:hsts_enabled: <%= scope.lookupvar("foreman::hsts_enabled") %>
+
 # Log settings for the current environment can be adjusted by adding them
 # here. For example, if you want to increase the log level.
 :logging:
   :level: <%= scope.lookupvar("foreman::logging_level") %>
+  :production:
+    :type: <%= scope.lookupvar("foreman::logging_type") %>
+    :layout: <%= scope.lookupvar("foreman::logging_layout") %>
 
 # Individual logging types can be toggled on/off here
 :loggers:
@@ -31,3 +47,27 @@
   :<%= logger %>:
     :enabled: <%= enabled %>
 <% end -%>
+
+# Foreman telemetry has three destinations: prometheus, statsd and rails log.
+:telemetry:
+  # prefix for all metrics
+  :prefix: '<%= scope.lookupvar("foreman::telemetry_prefix") %>'
+  # prometheus endpoint is at /metrics
+  # warning: ruby client library currently does not supprt multi-process web servers
+  :prometheus:
+    :enabled: <%= scope.lookupvar("foreman::telemetry_prometheus_enabled") %>
+  # works with statsd_exporter too, use the rake task to generate config
+  :statsd:
+    :enabled: <%= scope.lookupvar("foreman::telemetry_statsd_enabled") %>
+    # IP and port (do not use DNS)
+    :host: '<%= scope.lookupvar("foreman::telemetry_statsd_host") %>'
+    # one of 'statsd', 'statsite' or 'datadog'
+    :protocol: '<%= scope.lookupvar("foreman::telemetry_statsd_protocol") %>'
+  # Rails logs end up in logger named 'telemetry' when enabled
+  :logger:
+    :enabled: <%= scope.lookupvar("foreman::telemetry_logger_enabled") %>
+    # logging level as in Logger::LEVEL
+    :level: '<%= scope.lookupvar("foreman::telemetry_logger_level") %>'
+
+:dynflow:
+  :pool_size: <%= scope.lookupvar("foreman::dynflow_pool_size") %>

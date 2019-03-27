@@ -1,5 +1,6 @@
 # Installs the package for a given Foreman plugin
 define foreman::plugin(
+  $version     = $foreman::plugin_version,
   $package     = "${foreman::plugin_prefix}${title}",
   $config_file = "${foreman::plugin_config_dir}/foreman_${title}.yaml",
   $config      = undef,
@@ -14,8 +15,9 @@ define foreman::plugin(
     }
   }
   package { $real_package:
-    ensure => installed,
+    ensure => $version,
   }
+  ~> Foreman::Rake['apipie:cache:index']
 
   if $config {
     file { $config_file:

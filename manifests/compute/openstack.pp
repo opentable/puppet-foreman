@@ -1,4 +1,14 @@
+# = Foreman OpenStack compute resource support
+#
 # Provides support for OpenStack compute resources
-class foreman::compute::openstack {
-  include ::foreman::compute::foreman_compute
+#
+# === Parameters:
+#
+# $version::  Package version to install, defaults to installed
+#
+class foreman::compute::openstack(String $version = 'installed') {
+  package { 'foreman-openstack':
+    ensure => $version,
+    tag    => [ 'foreman-compute', ],
+  }
 }

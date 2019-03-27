@@ -13,6 +13,7 @@ class foreman::puppetmaster (
   $puppet_basedir   = $::foreman::params::puppet_basedir,
   $puppet_etcdir    = $::foreman::params::puppet_etcdir,
   $timeout          = $::foreman::params::puppetmaster_timeout,
+  $report_timeout   = $::foreman::params::puppetmaster_report_timeout,
   $ssl_ca           = $::foreman::params::client_ssl_ca,
   $ssl_cert         = $::foreman::params::client_ssl_cert,
   $ssl_key          = $::foreman::params::client_ssl_key,
@@ -25,9 +26,7 @@ class foreman::puppetmaster (
     default:  { $json_package = 'rubygem-json' }
   }
 
-  package { $json_package:
-    ensure  => installed,
-  }
+  ensure_packages([$json_package])
 
   file {"${puppet_etcdir}/foreman.yaml":
     content => template("${module_name}/puppet.yaml.erb"),
@@ -71,6 +70,21 @@ class foreman::puppetmaster (
       ensure => directory,
       owner  => $puppet_user,
       group  => $puppet_group,
+      mode   => '0750',
+    }
+
+    file { "${puppet_home}/yaml/node":
+      ensure => directory,
+      owner  => $puppet_user,
+      group  => $puppet_group,
+      mode   => '0750',
+    }
+
+    file { "${puppet_home}/yaml/facts":
+      ensure => directory,
+      owner  => $puppet_user,
+      group  => $puppet_group,
+      mode   => '0750',
     }
   }
 }

@@ -1,5 +1,11 @@
 # Configure foreman
 class foreman::config {
+  # Ensure 'puppet' user group is present before managing foreman user
+  # Relationship is duplicated there as defined() is parse-order dependent
+  if defined(Class['puppet::server::install']) {
+    Class['puppet::server::install'] -> Class['foreman::config']
+  }
+
   concat::fragment {'foreman_settings+01-header.yaml':
     target  => '/etc/foreman/settings.yaml',
     content => template('foreman/settings.yaml.erb'),
@@ -20,12 +26,18 @@ class foreman::config {
   }
 
   if $::foreman::email_delivery_method and !empty($::foreman::email_delivery_method) {
-    file { "/etc/foreman/${foreman::email_conf}":
-      ensure  => file,
-      owner   => 'root',
-      group   => $::foreman::group,
-      mode    => '0640',
-      content => template("foreman/${foreman::email_source}"),
+    if $::foreman::email_config_method == 'file' {
+      file { "/etc/foreman/${foreman::email_conf}":
+        ensure  => file,
+        owner   => 'root',
+        group   => $::foreman::group,
+        mode    => '0640',
+        content => template("foreman/${foreman::email_source}"),
+      }
+    } else {
+      file { "/etc/foreman/${foreman::email_conf}":
+        ensure => absent,
+      }
     }
   }
 
@@ -36,6 +48,25 @@ class foreman::config {
 
   file { $::foreman::app_root:
     ensure  => directory,
+  }
+
+  if $::foreman::db_root_cert and $::foreman::db_type == 'postgresql' {
+    $pg_cert_dir = "${::foreman::app_root}/.postgresql"
+
+    file { $pg_cert_dir:
+      ensure => 'directory',
+      owner  => 'root',
+      group  => $::foreman::group,
+      mode   => '0640',
+    }
+
+    file { "${pg_cert_dir}/root.crt":
+      ensure => file,
+      source => $::foreman::db_root_cert,
+      owner  => 'root',
+      group  => $::foreman::group,
+      mode   => '0640',
+    }
   }
 
   if $::foreman::manage_user {
@@ -59,21 +90,14 @@ class foreman::config {
     class { '::foreman::config::passenger': } -> anchor { 'foreman::config_end': }
 
     if $::foreman::ipa_authentication {
-      if !$::default_ipa_server or empty($::default_ipa_server) or !$::default_ipa_realm or empty($::default_ipa_realm) {
+      unless 'ipa' in $facts and 'default_server' in $facts['ipa'] and 'default_realm' in $facts['ipa'] {
         fail("${::hostname}: The system does not seem to be IPA-enrolled")
       }
 
       if $::foreman::selinux or (str2bool($::selinux) and $::foreman::selinux != false) {
-        selboolean { 'allow_httpd_mod_auth_pam':
+        selboolean { ['allow_httpd_mod_auth_pam', 'httpd_dbus_sssd']:
           persistent => true,
           value      => 'on',
-        }
-
-        # Prior to RHEL 6.6, httpd_dbus_sssd is unavailable
-        exec { 'setsebool httpd_dbus_sssd':
-          command => '/usr/sbin/setsebool -P httpd_dbus_sssd on',
-          onlyif  => '/usr/sbin/getsebool httpd_dbus_sssd',
-          unless  => '/usr/sbin/getsebool httpd_dbus_sssd | grep \'on$\'',
         }
       }
 
@@ -96,11 +120,11 @@ class foreman::config {
       exec { 'ipa-getkeytab':
         command => "/bin/echo Get keytab \
           && KRB5CCNAME=KEYRING:session:get-http-service-keytab kinit -k \
-          && KRB5CCNAME=KEYRING:session:get-http-service-keytab /usr/sbin/ipa-getkeytab -s ${::default_ipa_server} -k ${foreman::http_keytab} -p HTTP/${::fqdn} \
+          && KRB5CCNAME=KEYRING:session:get-http-service-keytab /usr/sbin/ipa-getkeytab -s ${facts['ipa']['default_server']} -k ${foreman::http_keytab} -p HTTP/${::fqdn} \
           && kdestroy -c KEYRING:session:get-http-service-keytab",
         creates => $::foreman::http_keytab,
-      } ->
-      file { $::foreman::http_keytab:
+      }
+      -> file { $::foreman::http_keytab:
         ensure => file,
         owner  => apache,
         mode   => '0600',
@@ -120,13 +144,10 @@ class foreman::config {
 
 
       if $::foreman::ipa_manage_sssd {
-        $sssd_services = ensure_value_in_string($::sssd_services, ['ifp'], ', ')
-
-        $sssd_ldap_user_extra_attrs = ensure_value_in_string($::sssd_ldap_user_extra_attrs, ['email:mail', 'lastname:sn', 'firstname:givenname'], ', ')
-
-        $sssd_allowed_uids = ensure_value_in_string($::sssd_allowed_uids, ['apache', 'root'], ', ')
-
-        $sssd_user_attributes = ensure_value_in_string($::sssd_user_attributes, ['+email', '+firstname', '+lastname'], ', ')
+        $sssd_services = join(unique(pick($facts['sssd']['services'], []) + ['ifp']), ', ')
+        $sssd_ldap_user_extra_attrs = join(unique(pick($facts['sssd']['ldap_user_extra_attrs'], []) + ['email:mail', 'lastname:sn', 'firstname:givenname']), ', ')
+        $sssd_allowed_uids = join(unique(pick($facts['sssd']['allowed_uids'], []) + ['apache', 'root']), ', ')
+        $sssd_user_attributes = join(unique(pick($facts['sssd']['user_attributes'], []) + ['+email', '+firstname', '+lastname']), ', ')
 
         augeas { 'sssd-ifp-extra-attributes':
           context => '/files/etc/sssd/sssd.conf',

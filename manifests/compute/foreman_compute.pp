@@ -5,7 +5,7 @@
 #
 # $version::  Package version to install, defaults to installed
 #
-class foreman::compute::foreman_compute ( $version = 'installed' ) {
+class foreman::compute::foreman_compute(String $version = 'installed') {
   package { 'foreman-compute':
     ensure => $version,
     tag    => [ 'foreman-compute', ],

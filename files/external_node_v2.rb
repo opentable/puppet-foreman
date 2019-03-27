@@ -11,9 +11,9 @@ require 'rbconfig'
 require 'yaml'
 
 if RbConfig::CONFIG['host_os'] =~ /freebsd|dragonfly/i
-  $settings_file = "/usr/local/etc/puppet/foreman.yaml"
+  $settings_file ||= '/usr/local/etc/puppet/foreman.yaml'
 else
-  $settings_file = "/etc/puppet/foreman.yaml"
+  $settings_file ||= File.exist?('/etc/puppetlabs/puppet/foreman.yaml') ? '/etc/puppetlabs/puppet/foreman.yaml' : '/etc/puppet/foreman.yaml'
 end
 
 SETTINGS = YAML.load_file($settings_file)
@@ -71,6 +71,8 @@ class Http_Fact_Requests
   end
 end
 
+class FactUploadError < StandardError; end
+
 require 'etc'
 require 'net/http'
 require 'net/https'
@@ -102,6 +104,8 @@ def process_all_facts(http_requests)
       elsif req
         upload_facts(certname, req)
       end
+    else
+      $stderr.puts "Fact file #{f} does not contain any fact"
     end
   end
 end
@@ -111,14 +115,34 @@ def build_body(certname,filename)
   facts        = File.read(filename)
   puppet_facts = YAML::load(facts.gsub(/\!ruby\/object.*$/,''))
   hostname     = puppet_facts['values']['fqdn'] || certname
-  
+
+  # if there is no environment in facts
+  # get it from node file ({puppetdir}/yaml/node/
+  unless puppet_facts['values'].key?('environment') || puppet_facts['values'].key?('agent_specified_environment')
+    node_filename = filename.sub('/facts/', '/node/')
+    if File.exist?(node_filename)
+      node_yaml = File.read(node_filename)
+      node_data = YAML::load(node_yaml.gsub(/\!ruby\/object.*$/,''))
+      if node_data.key?('environment')
+        puppet_facts['values']['environment'] = node_data['environment']
+      end
+    end
+  end
+
+  begin
+    require 'facter'
+    puppet_facts['values']['puppetmaster_fqdn'] = Facter.value(:fqdn).to_s
+  rescue LoadError
+    puppet_facts['values']['puppetmaster_fqdn'] = `hostname -f`.strip
+  end
+
   # filter any non-printable char from the value, if it is a String
   puppet_facts['values'].each do |key, val|
     if val.is_a? String
       puppet_facts['values'][key] = val.scan(/[[:print:]]/).join
     end
   end
-  
+
   {'facts' => puppet_facts['values'], 'name' => hostname, 'certname' => certname}
 end
 
@@ -144,7 +168,7 @@ def generate_fact_request(certname, filename)
   # Temp file keeping the last run time
   stat = stat_file("#{certname}-push-facts")
   last_run = File.exists?(stat) ? File.stat(stat).mtime.utc : Time.now - 365*24*60*60
-  last_fact = File.stat(filename).mtime.utc
+  last_fact = File.exists?(filename) ? File.stat(filename).mtime.utc : Time.at(0)
   if last_fact > last_run
     begin
       uri = URI.parse("#{url}/api/hosts/facts")
@@ -187,7 +211,7 @@ def enc(certname)
       http.key  = OpenSSL::PKey::RSA.new(File.read(SETTINGS[:ssl_key]), nil)
     end
   end
-  res = http.start { |http| http.request(req) }
+  res = http.request(req)
 
   raise "Error retrieving node #{certname}: #{res.class}\nCheck Foreman's /var/log/foreman/production.log for more information." unless res.code == "200"
   res.body
@@ -198,11 +222,20 @@ def upload_facts(certname, req)
   uri = URI.parse("#{url}/api/hosts/facts")
   begin
     res = initialize_http(uri)
+    res.open_timeout = SETTINGS[:timeout]
     res.read_timeout = SETTINGS[:timeout]
-    res.start { |http| http.request(req) }
-    cache("#{certname}-push-facts", "Facts from this host were last pushed to #{uri} at #{Time.now}\n")
+    res.start do |http|
+      response = http.request(req)
+      if response.code.start_with?('2')
+        cache("#{certname}-push-facts", "Facts from this host were last pushed to #{uri} at #{Time.now}\n")
+      else
+        $stderr.puts "During the fact upload the server responded with: #{response.code} #{response.message}. Error is ignored and the execution continues."
+        $stderr.puts response.body
+      end
+    end
   rescue => e
-    raise "Could not send facts to Foreman: #{e}"
+    $stderr.puts "During fact upload occured an exception: #{e}"
+    raise FactUploadError, "Could not send facts to Foreman: #{e}"
   end
 end
 
@@ -240,7 +273,9 @@ def watch_and_send_facts(parallel)
 
   inotify = Inotify.new
 
-  inotify.add_watch("#{puppetdir}/yaml/facts", Inotify::CREATE)
+  # actually we need only MOVED_TO events because puppet uses File.rename after tmp file created and flushed.
+  # see lib/puppet/util.rb near line 469
+  inotify.add_watch("#{puppetdir}/yaml/facts", Inotify::CREATE | Inotify::MOVED_TO )
 
   yamls = Dir["#{puppetdir}/yaml/facts/*.yaml"]
 
@@ -261,7 +296,9 @@ def watch_and_send_facts(parallel)
     add_watch = false
 
     if !fn
-      fn = ev.name
+      # inotify returns basename for renamed file as ev.name
+      # but we need full path
+      fn = "#{puppetdir}/yaml/facts/#{ev.name}"
       add_watch = true
     end
 
@@ -301,6 +338,10 @@ if __FILE__ == $0 then
     Process::UID.change_privilege(Etc.getpwnam(puppetuser).uid) unless Etc.getpwuid.name == puppetuser
     # Facter (in thread_count) tries to read from $HOME, which is still /root after the UID change
     ENV['HOME'] = Etc.getpwnam(puppetuser).dir
+    # Change CWD to the determined home directory before continuing to make
+    # sure we don't reside in /root or anywhere else we don't have access
+    # permissions
+    Dir.chdir ENV['HOME']
   rescue
     $stderr.puts "cannot switch to user #{puppetuser}, continuing as '#{Etc.getpwuid.name}'"
   end
@@ -322,22 +363,24 @@ if __FILE__ == $0 then
       upload_facts_parallel(http_fact_requests)
     else
       certname = ARGV[0] || raise("Must provide certname as an argument")
-      # send facts to Foreman - enable 'facts' setting to activate
-      # if you use this option below, make sure that you don't send facts to foreman via the rake task or push facts alternatives.
-      #
-      if SETTINGS[:facts]
-        req = generate_fact_request certname, "#{puppetdir}/yaml/facts/#{certname}.yaml"
-        upload_facts(certname, req)
-      end
+
       #
       # query External node
       begin
         result = ""
-        timeout(tsecs) do
+        Timeout.timeout(tsecs) do
+          # send facts to Foreman - enable 'facts' setting to activate
+          # if you use this option below, make sure that you don't send facts to foreman via the rake task or push facts alternatives.
+          #
+          if SETTINGS[:facts]
+            req = generate_fact_request certname, "#{puppetdir}/yaml/facts/#{certname}.yaml"
+            upload_facts(certname, req)
+          end
+
           result = enc(certname)
           cache(certname, result)
         end
-      rescue TimeoutError, SocketError, Errno::EHOSTUNREACH, Errno::ECONNREFUSED
+      rescue TimeoutError, SocketError, Errno::EHOSTUNREACH, Errno::ECONNREFUSED, FactUploadError
         # Read from cache, we got some sort of an error.
         result = read_cache(certname)
       end

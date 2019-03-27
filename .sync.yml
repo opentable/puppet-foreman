@@ -1,16 +1,20 @@
 ---
+.travis.yml:
+  beaker_sets:
+    - centos7-64
+    - debian9-64
+  env:
+    global:
+      - PARALLEL_TEST_PROCESSORS=8
 Gemfile:
   extra:
-    - gem: json
     - gem: webmock
-    - gem: addressable
-      version: '< 2.4'
-      options:
-        platforms:
-        - 'ruby_18'
+      version: '~> 2.0'
+    - gem: oauth
 Rakefile:
   param_docs_pattern:
     - manifests/cli.pp
+    - manifests/cli/*.pp
     - manifests/init.pp
     - manifests/compute/*.pp
     - manifests/plugin/*.pp
@@ -22,3 +26,5 @@ spec/spec_helper.rb:
     def static_fixture_path
       File.join(File.dirname(__FILE__), 'static_fixtures')
     end
+
+    Dir["./spec/support/**/*.rb"].sort.each { |f| require f }

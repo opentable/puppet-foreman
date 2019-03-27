@@ -1,8 +1,9 @@
 # Data for the foreman-tasks plugin
 class foreman::plugin::tasks::params {
+  $automatic_cleanup = false
+  $cron_line = '45 19 * * *'
   case $::osfamily {
     'RedHat': {
-      $service = 'foreman-tasks'
       case $::operatingsystem {
         'fedora': {
           $package = 'rubygem-foreman-tasks'
@@ -14,7 +15,6 @@ class foreman::plugin::tasks::params {
     }
     'Debian': {
       $package = 'ruby-foreman-tasks'
-      $service = 'ruby-foreman-tasks'
     }
     /^(FreeBSD|DragonFly)$/: {
       # do nothing to not break foreman-installer

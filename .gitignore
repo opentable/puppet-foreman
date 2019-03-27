@@ -30,10 +30,16 @@ vendor/
 
 ## rspec
 spec/fixtures/
+junit/
 
 ## Puppet module
 pkg/
 coverage/
+.yardoc/
 
 ## InteliJ / RubyMine
 .idea
+
+## Beaker
+.vagrant/
+log/

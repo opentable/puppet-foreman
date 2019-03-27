@@ -2,13 +2,12 @@ require 'spec_helper'
 
 describe 'foreman::config' do
 
-  on_supported_os.each do |os, facts|
+  on_os_under_test.each do |os, facts|
     if facts[:osfamily] == 'RedHat'
       context "on #{os}" do
         let(:facts) do
           facts.merge({
-            :concat_basedir => '/tmp',
-            :interfaces     => '',
+            :interfaces => '',
           })
         end
 
@@ -61,38 +60,47 @@ describe 'foreman::config' do
           end
 
           describe 'enrolled system' do
-            let :facts do
+            let :enrolled_facts do
               facts.merge({
-                :concat_basedir => '/tmp',
-                :interfaces     => '',
-                :default_ipa_server => 'ipa.example.com',
-                :default_ipa_realm => 'REALM',
+                :interfaces => '',
+                :ipa => {
+                  :default_server => 'ipa.example.com',
+                  :default_realm => 'REALM',
+                },
+                :sssd => {
+                  :services => ['ifp'],
+                },
               })
             end
+            let(:facts) { enrolled_facts }
 
             it { should contain_exec('ipa-getkeytab') }
 
+            it 'should contain Passenger fragments' do
+              should contain_foreman__config__passenger__fragment('intercept_form_submit').
+                with_ssl_content(/^\s*InterceptFormPAMService foreman$/)
+
+              should contain_foreman__config__passenger__fragment('lookup_identity')
+
+              should contain_foreman__config__passenger__fragment('auth_kerb').
+                with_ssl_content(%r{^\s*KrbAuthRealms REALM$}).
+                with_ssl_content(%r{^\s*Krb5KeyTab /etc/httpd/conf/http.keytab$}).
+                with_ssl_content(%r{^\s*require pam-account foreman$})
+            end
+
             describe 'on non-selinux' do
               let :facts do
-                facts.merge({
-                  :concat_basedir => '/tmp',
-                  :interfaces     => '',
-                  :default_ipa_server => 'ipa.example.com',
-                  :default_ipa_realm => 'REALM',
+                enrolled_facts.merge({
                   :selinux => 'false',
                 })
               end
 
-              it { should_not contain_exec('setsebool httpd_dbus_sssd') }
+              it { should_not contain_selboolean('httpd_dbus_sssd') }
             end
 
             describe 'on selinux system but disabled by user' do
               let :facts do
-                facts.merge({
-                  :concat_basedir => '/tmp',
-                  :interfaces     => '',
-                  :default_ipa_server => 'ipa.example.com',
-                  :default_ipa_realm => 'REALM',
+                enrolled_facts.merge({
                   :selinux => 'true',
                 })
               end
@@ -105,16 +113,12 @@ describe 'foreman::config' do
             }"
               end
 
-              it { should_not contain_exec('setsebool httpd_dbus_sssd') }
+              it { should_not contain_selboolean('httpd_dbus_sssd') }
             end
 
             describe 'on selinux system with enabled by user' do
               let :facts do
-                facts.merge({
-                  :concat_basedir => '/tmp',
-                  :interfaces     => '',
-                  :default_ipa_server => 'ipa.example.com',
-                  :default_ipa_realm => 'REALM',
+                enrolled_facts.merge({
                   :selinux => 'true',
                 })
               end
@@ -127,21 +131,17 @@ describe 'foreman::config' do
             }"
               end
 
-              it { should contain_exec('setsebool httpd_dbus_sssd') }
+              it { should contain_selboolean('httpd_dbus_sssd') }
             end
 
             describe 'on selinux' do
               let :facts do
-                facts.merge({
-                  :concat_basedir => '/tmp',
-                  :interfaces     => '',
-                  :default_ipa_server => 'ipa.example.com',
-                  :default_ipa_realm => 'REALM',
+                enrolled_facts.merge({
                   :selinux => 'true',
                 })
               end
 
-              it { should contain_exec('setsebool httpd_dbus_sssd') }
+              it { should contain_selboolean('httpd_dbus_sssd') }
             end
           end
         end

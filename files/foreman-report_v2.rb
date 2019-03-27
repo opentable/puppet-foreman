@@ -25,24 +25,30 @@ rescue LoadError
 end
 
 if RbConfig::CONFIG['host_os'] =~ /freebsd|dragonfly/i
-  $settings_file = "/usr/local/etc/puppet/foreman.yaml"
+  $settings_file ||= '/usr/local/etc/puppet/foreman.yaml'
 else
-  $settings_file = "/etc/puppet/foreman.yaml"
+  $settings_file ||= File.exist?('/etc/puppetlabs/puppet/foreman.yaml') ? '/etc/puppetlabs/puppet/foreman.yaml' : '/etc/puppet/foreman.yaml'
 end
 
 SETTINGS = YAML.load_file($settings_file)
 
 Puppet::Reports.register_report(:foreman) do
-  Puppet.settings.use(:reporting)
   desc "Sends reports directly to Foreman"
 
   def process
+    # Default retry limit is 1.
+    retry_limit = SETTINGS[:report_retry_limit] ? SETTINGS[:report_retry_limit] : 1
+    tries = 0
     begin
       # check for report metrics
       raise(Puppet::ParseError, "Invalid report: can't find metrics information for #{self.host}") if self.metrics.nil?
 
       uri = URI.parse(foreman_url)
       http = Net::HTTP.new(uri.host, uri.port)
+      if SETTINGS[:report_timeout]
+        http.open_timeout = SETTINGS[:report_timeout]
+        http.read_timeout = SETTINGS[:report_timeout]
+      end
       http.use_ssl     = uri.scheme == 'https'
       if http.use_ssl?
         if SETTINGS[:ssl_ca] && !SETTINGS[:ssl_ca].empty?
@@ -56,13 +62,18 @@ Puppet::Reports.register_report(:foreman) do
           http.key  = OpenSSL::PKey::RSA.new(File.read(SETTINGS[:ssl_key]), nil)
         end
       end
-      req = Net::HTTP::Post.new("#{uri.path}/api/reports")
+      req = Net::HTTP::Post.new("#{uri.path}/api/config_reports")
       req.add_field('Accept', 'application/json,version=2' )
       req.content_type = 'application/json'
-      req.body         = {'report' => generate_report}.to_json
+      req.body         = {'config_report' => generate_report}.to_json
       response = http.request(req)
     rescue Exception => e
-      raise Puppet::Error, "Could not send report to Foreman at #{foreman_url}/api/reports: #{e}\n#{e.backtrace}"
+      if (tries += 1) < retry_limit
+        Puppet.err "Could not send report to Foreman at #{foreman_url}/api/config_reports (attempt #{tries}/#{retry_limit}). Retrying... Stacktrace: #{e}\n#{e.backtrace}"
+        retry
+      else
+        raise Puppet::Error, "Could not send report to Foreman at #{foreman_url}/api/config_reports: #{e}\n#{e.backtrace}"
+      end
     end
   end
 

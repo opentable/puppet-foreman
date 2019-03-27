@@ -3,35 +3,43 @@
 
 source 'https://rubygems.org'
 
-gem 'puppet', ENV.key?('PUPPET_VERSION') ? "~> #{ENV['PUPPET_VERSION']}" : '>= 2.7'
+gem 'puppet', ENV.key?('PUPPET_VERSION') ? "~> #{ENV['PUPPET_VERSION']}" : '>= 4.6'
 
-if RUBY_VERSION.start_with? '1.8'
-  gem 'rspec', '>= 3', '< 3.2'
-else
-  gem 'rspec', '~> 3.0'
-end
 gem 'rake'
-gem 'rspec-puppet', '~> 2.0'
-gem 'puppetlabs_spec_helper', '>= 0.8.0'
-gem 'puppet-lint', '>= 1'
-gem 'puppet-lint-unquoted_string-check'
-gem 'puppet-lint-empty_string-check'
-gem 'puppet-lint-spaceship_operator_without_tag-check'
-gem 'puppet-lint-variable_contains_upcase'
+gem 'rspec', '~> 3.0'
+gem 'rdoc', '~> 5.1.0', {"platforms"=>["ruby_21"]}
+gem 'rspec-puppet', '~> 2.3'
+gem 'rspec-puppet-facts', '>= 1.7'
+gem 'puppetlabs_spec_helper', '>= 2.1.1'
+gem 'puppet-lint', '>= 2'
 gem 'puppet-lint-absolute_classname-check'
-gem 'puppet-lint-undef_in_function-check'
-gem 'puppet-lint-leading_zero-check'
-gem 'puppet-lint-trailing_comma-check'
+gem 'puppet-lint-classes_and_types_beginning_with_digits-check'
+gem 'puppet-lint-empty_string-check'
 gem 'puppet-lint-file_ensure-check'
+gem 'puppet-lint-leading_zero-check'
 gem 'puppet-lint-param-docs', '>= 1.3.0'
+gem 'puppet-lint-spaceship_operator_without_tag-check'
+gem 'puppet-lint-strict_indent-check'
+gem 'puppet-lint-trailing_comma-check'
+gem 'puppet-lint-undef_in_function-check'
+gem 'puppet-lint-unquoted_string-check'
+gem 'puppet-lint-variable_contains_upcase'
+gem 'puppet-lint-version_comparison-check'
 gem 'simplecov'
-gem 'puppet-blacksmith', '>= 3.1.0', {"groups"=>["development"]}
-gem 'rest-client', '< 1.7', {"platforms"=>["ruby_18"], "groups"=>["development"]}
-gem 'mime-types', '~> 1.0', {"platforms"=>["ruby_18"], "groups"=>["development"]}
-gem 'rspec-puppet-facts'
+gem 'github_changelog_generator', {"git"=>"https://github.com/skywinder/github-changelog-generator", "ref"=>"20ee04ba1234e9e83eb2ffb5056e23d641c7a018", "groups"=>["development"]}
+gem 'puppet-blacksmith', '>= 4.1.0', {"groups"=>["development"]}
+gem 'beaker', '>= 4.0.0', {"groups"=>["system_tests"]}
+gem 'beaker-docker', {"groups"=>["system_tests"]}
+gem 'beaker-hostgenerator', '>= 1.1.10', {"groups"=>["system_tests"]}
+gem 'beaker-puppet', {"groups"=>["system_tests"]}
+gem 'beaker-rspec', {"groups"=>["system_tests"]}
+gem 'beaker-module_install_helper', {"groups"=>["system_tests"]}
+gem 'beaker-puppet_install_helper', {"groups"=>["system_tests"]}
 gem 'metadata-json-lint'
-gem 'json'
-gem 'webmock'
-gem 'addressable', '< 2.4', {"platforms"=>["ruby_18"]}
+gem 'kafo_module_lint'
+gem 'rgen'
+gem 'parallel_tests'
+gem 'webmock', '~> 2.0'
+gem 'oauth'
 
 # vim:ft=ruby

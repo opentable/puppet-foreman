@@ -2,66 +2,96 @@
 #
 # === Parameters:
 #
-# $app_root::               Root of the application.
+# $app_root::                 Root of the application.
 #
-# $listen_on_interface::    Specify which interface to bind passenger to.
-#                           Defaults to all interfaces.
+# $listen_on_interface::      Specify which interface to bind passenger to.
+#                             Defaults to all interfaces.
 #
-# $ruby::                   Path to Ruby interpreter
+# $ruby::                     Path to Ruby interpreter
 #
-# $servername::             Servername for the vhost.
+# $priority::                 Apache vhost priority
 #
-# $ssl::                    Whether to enable SSL.
+# $servername::               Servername for the vhost.
 #
-# $ssl_cert::               Location of the SSL certificate file.
+# $serveraliases::            Serveraliases for the vhost.
 #
-# $ssl_key::                Location of the SSL key file.
+# $server_port::              Port for Apache to listen on HTTP requests
 #
-# $ssl_ca::                 Location of the SSL CA file
+# $server_ssl_port::          Port for Apache to listen on HTTPS requests
 #
-# $ssl_chain::              Location of the SSL chain file
+# $ssl::                      Whether to enable SSL.
 #
-# $ssl_crl::                Location of the SSL certificate revocation list file
+# $ssl_cert::                 Location of the SSL certificate file.
 #
-# $use_vhost::              Whether to install a vhost. Note that using ssl and
-#                           no vhost is unsupported.
+# $ssl_certs_dir::            Location of additional certificates for SSL client authentication.
 #
-# $user::                   The user under which the application runs.
+# $ssl_key::                  Location of the SSL key file.
 #
-# $prestart::               Pre-start the first passenger worker instance process during httpd start.
-#                           type:boolean
+# $ssl_ca::                   Location of the SSL CA file
 #
-# $min_instances::          Minimum passenger worker instances to keep when application is idle.
+# $ssl_chain::                Location of the SSL chain file
 #
-# $start_timeout::          Amount of seconds to wait for Ruby application boot.
+# $ssl_crl::                  Location of the SSL certificate revocation list file
+#
+# $ssl_protocol::             SSLProtocol configuration to use
+#
+# $use_vhost::                Whether to install a vhost. Note that using ssl and
+#                             no vhost is unsupported.
+#
+# $user::                     The user under which the application runs.
+#
+# $prestart::                 Pre-start the first passenger worker instance process during httpd start.
+#
+# $min_instances::            Minimum passenger worker instances to keep when application is idle.
+#
+# $start_timeout::            Amount of seconds to wait for Ruby application boot.
+#
+# $foreman_url::              The URL Foreman should be reachable under. Used for loading the application
+#                             on startup rather than on demand.
+#
+# $keepalive::                Enable KeepAlive setting of Apache?
+#
+# $max_keepalive_requests::   MaxKeepAliveRequests setting of Apache
+#                             (Number of requests allowed on a persistent connection)
+#
+# $keepalive_timeout::        KeepAliveTimeout setting of Apache
+#                             (Seconds the server will wait for subsequent requests on a persistent connection)
+#
+# $access_log_format::        Apache log format to use
+#
+# $ipa_authentication::       Whether to install support for IPA authentication
 #
 class foreman::config::passenger(
-  $app_root            = $::foreman::app_root,
-  $listen_on_interface = $::foreman::passenger_interface,
-  $ruby                = $::foreman::passenger_ruby,
-  $servername          = $::foreman::servername,
-  $ssl                 = $::foreman::ssl,
-  $ssl_ca              = $::foreman::server_ssl_ca,
-  $ssl_chain           = $::foreman::server_ssl_chain,
-  $ssl_cert            = $::foreman::server_ssl_cert,
-  $ssl_key             = $::foreman::server_ssl_key,
-  $ssl_crl             = $::foreman::server_ssl_crl,
-  $use_vhost           = $::foreman::use_vhost,
-  $user                = $::foreman::user,
-  $prestart            = $::foreman::passenger_prestart,
-  $min_instances       = $::foreman::passenger_min_instances,
-  $start_timeout       = $::foreman::passenger_start_timeout,
+  Stdlib::Absolutepath $app_root = $::foreman::app_root,
+  Optional[String] $listen_on_interface = $::foreman::passenger_interface,
+  Optional[String] $ruby = $::foreman::passenger_ruby,
+  String $priority = $::foreman::vhost_priority,
+  String $servername = $::foreman::servername,
+  Array[String] $serveraliases = $::foreman::serveraliases,
+  Integer[0, 65535] $server_port = $::foreman::server_port,
+  Integer[0, 65535] $server_ssl_port = $::foreman::server_ssl_port,
+  Boolean $ssl = $::foreman::ssl,
+  Stdlib::Absolutepath $ssl_ca = $::foreman::server_ssl_ca,
+  Stdlib::Absolutepath $ssl_chain = $::foreman::server_ssl_chain,
+  Stdlib::Absolutepath $ssl_cert = $::foreman::server_ssl_cert,
+  Variant[String[0], Stdlib::Absolutepath] $ssl_certs_dir = $::foreman::server_ssl_certs_dir,
+  Stdlib::Absolutepath $ssl_key = $::foreman::server_ssl_key,
+  Optional[Variant[String[0], Stdlib::Absolutepath]] $ssl_crl = $::foreman::server_ssl_crl,
+  Optional[String] $ssl_protocol = $::foreman::server_ssl_protocol,
+  Boolean $use_vhost = $::foreman::use_vhost,
+  String $user = $::foreman::user,
+  Boolean $prestart = $::foreman::passenger_prestart,
+  Integer[0] $min_instances = $::foreman::passenger_min_instances,
+  Integer[0] $start_timeout = $::foreman::passenger_start_timeout,
+  Stdlib::HTTPUrl $foreman_url = $::foreman::foreman_url,
+  Boolean $keepalive = $::foreman::keepalive,
+  Integer[0] $max_keepalive_requests = $::foreman::max_keepalive_requests,
+  Integer[0] $keepalive_timeout = $::foreman::keepalive_timeout,
+  Optional[String] $access_log_format = undef,
+  Boolean $ipa_authentication = $::foreman::ipa_authentication,
 ) {
-  # validate parameter values
-  if $listen_on_interface {
-    validate_string($listen_on_interface)
-  }
-  validate_string($servername)
-  validate_bool($ssl)
-  validate_bool($prestart)
-
   $docroot = "${app_root}/public"
-  $suburi_parts = split($::foreman::foreman_url, '/')
+  $suburi_parts = split($foreman_url, '/')
   $suburi_parts_count = size($suburi_parts) - 1
   if $suburi_parts_count >= 3 {
     $suburi_without_slash = join(values_at($suburi_parts, ["3-${suburi_parts_count}"]), '/')
@@ -73,20 +103,15 @@ class foreman::config::passenger(
   include ::apache
   include ::apache::mod::headers
   include ::apache::mod::passenger
-  Class['::apache'] -> anchor { 'foreman::config::passenger_end': }
 
-  # Ensure the Version module is loaded as we need it in the Foreman vhosts
-  # RedHat distros come with this enabled. Newer Debian and Ubuntu distros
-  # comes also with this enabled. Only old Debian and Ubuntu distros (squeeze,
-  # lucid, precise) needs hand-holding.
-  if ($::operatingsystemrelease == '12.04') and ($::operatingsystem == 'Ubuntu') {
-    ::apache::mod { 'version': }
+  if $ipa_authentication {
+    include ::apache::mod::authnz_pam
+    include ::apache::mod::intercept_form_submit
+    include ::apache::mod::lookup_identity
+    include ::apache::mod::auth_kerb
   }
 
   if $use_vhost {
-    # Workaround so apache::vhost doesn't attempt to create a directory
-    file { $docroot: }
-
     # Check the value in case the interface doesn't exist, otherwise listen on all interfaces
     if $listen_on_interface and $listen_on_interface in split($::interfaces, ',') {
       $listen_interface = inline_template("<%= @ipaddress_${listen_on_interface} %>")
@@ -95,11 +120,11 @@ class foreman::config::passenger(
     }
 
     $http_prestart = $prestart ? {
-      true  => "http://${servername}",
+      true  => "http://${servername}:${server_port}",
       false => undef,
     }
 
-    file { "${apache::confd_dir}/05-foreman.d":
+    file { "${apache::confd_dir}/${priority}-foreman.d":
       ensure  => 'directory',
       owner   => 'root',
       group   => 'root',
@@ -108,9 +133,15 @@ class foreman::config::passenger(
       recurse => true,
     }
 
+    $keepalive_onoff = $keepalive ? {
+      true    => 'on',
+      default => 'off',
+    }
+
     apache::vhost { 'foreman':
       add_default_charset     => 'UTF-8',
       docroot                 => $docroot,
+      manage_docroot          => false,
       ip                      => $listen_interface,
       options                 => ['SymLinksIfOwnerMatch'],
       passenger_app_root      => $app_root,
@@ -118,17 +149,22 @@ class foreman::config::passenger(
       passenger_pre_start     => $http_prestart,
       passenger_start_timeout => $start_timeout,
       passenger_ruby          => $ruby,
-      port                    => 80,
-      priority                => '05',
+      port                    => $server_port,
+      priority                => $priority,
       servername              => $servername,
-      serveraliases           => ['foreman'],
-      custom_fragment         => template('foreman/_assets.conf.erb', 'foreman/_virt_host_include.erb',
-                                          'foreman/_suburi.conf.erb'),
+      serveraliases           => $serveraliases,
+      keepalive               => $keepalive_onoff,
+      max_keepalive_requests  => $max_keepalive_requests,
+      keepalive_timeout       => $keepalive_timeout,
+      access_log_format       => $access_log_format,
+      additional_includes     => ["${::apache::confd_dir}/${priority}-foreman.d/*.conf"],
+      use_optional_includes   => true,
+      custom_fragment         => template('foreman/_assets.conf.erb', 'foreman/_suburi.conf.erb'),
     }
 
     if $ssl {
       $https_prestart = $prestart ? {
-        true  => "https://${servername}",
+        true  => "https://${servername}:${server_ssl_port}",
         false => undef,
       }
       if $ssl_crl and $ssl_crl != '' {
@@ -139,7 +175,7 @@ class foreman::config::passenger(
         $ssl_crl_check = undef
       }
 
-      file { "${apache::confd_dir}/05-foreman-ssl.d":
+      file { "${apache::confd_dir}/${priority}-foreman-ssl.d":
         ensure  => 'directory',
         owner   => 'root',
         group   => 'root',
@@ -151,6 +187,7 @@ class foreman::config::passenger(
       apache::vhost { 'foreman-ssl':
         add_default_charset     => 'UTF-8',
         docroot                 => $docroot,
+        manage_docroot          => false,
         ip                      => $listen_interface,
         options                 => ['SymLinksIfOwnerMatch'],
         passenger_app_root      => $app_root,
@@ -158,22 +195,29 @@ class foreman::config::passenger(
         passenger_pre_start     => $https_prestart,
         passenger_start_timeout => $start_timeout,
         passenger_ruby          => $ruby,
-        port                    => 443,
-        priority                => '05',
+        port                    => $server_ssl_port,
+        priority                => $priority,
         servername              => $servername,
-        serveraliases           => ['foreman'],
+        serveraliases           => $serveraliases,
         ssl                     => true,
         ssl_cert                => $ssl_cert,
+        ssl_certs_dir           => $ssl_certs_dir,
         ssl_key                 => $ssl_key,
         ssl_chain               => $ssl_chain,
         ssl_ca                  => $ssl_ca,
         ssl_crl                 => $ssl_crl_real,
         ssl_crl_check           => $ssl_crl_check,
+        ssl_protocol            => $ssl_protocol,
         ssl_verify_client       => 'optional',
         ssl_options             => '+StdEnvVars +ExportCertData',
         ssl_verify_depth        => '3',
-        custom_fragment         => template('foreman/_assets.conf.erb', 'foreman/_ssl_virt_host_include.erb',
-                                            'foreman/_suburi.conf.erb'),
+        keepalive               => $keepalive_onoff,
+        max_keepalive_requests  => $max_keepalive_requests,
+        keepalive_timeout       => $keepalive_timeout,
+        access_log_format       => $access_log_format,
+        additional_includes     => ["${::apache::confd_dir}/${priority}-foreman-ssl.d/*.conf"],
+        use_optional_includes   => true,
+        custom_fragment         => template('foreman/_assets.conf.erb', 'foreman/_ssl_username.conf.erb', 'foreman/_suburi.conf.erb'),
       }
     }
   } else {

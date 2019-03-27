@@ -1,10 +1,19 @@
 # Set up the foreman database
 class foreman::database {
   if $::foreman::db_manage {
-    validate_string($::foreman::admin_username, $::foreman::admin_password, $::foreman::apipie_task)
-    validate_re($::foreman::apipie_task, '^apipie:')
-
     $db_class = "foreman::database::${::foreman::db_type}"
+
+    $after_db_notify = $::foreman::db_manage_rake ? {
+      true    => Foreman_config_entry['db_pending_migration'],
+      default => undef,
+    }
+
+    class { $db_class:
+      notify => $after_db_notify,
+    }
+  }
+
+  if $::foreman::db_manage_rake {
     $seed_env = {
       'SEED_ADMIN_USER'       => $::foreman::admin_username,
       'SEED_ADMIN_PASSWORD'   => $::foreman::admin_password,
@@ -21,23 +30,20 @@ class foreman::database {
       $foreman_service = Class['foreman::service']
     }
 
-    class { $db_class: } ~>
     foreman_config_entry { 'db_pending_migration':
       value => false,
       dry   => true,
-    } ~>
-    foreman::rake { 'db:migrate': } ~>
-    foreman_config_entry { 'db_pending_seed':
+    }
+    ~> foreman::rake { 'db:migrate': }
+    ~> foreman_config_entry { 'db_pending_seed':
       value  => false,
       dry    => true,
       # to address #7353: settings initialization race condition
       before => $foreman_service,
-    } ~>
-    foreman::rake { 'db:seed':
-      environment => delete_undef_values($seed_env),
-    } ~>
-    foreman::rake { $::foreman::apipie_task:
-      timeout => 0,
     }
+    ~> foreman::rake { 'db:seed':
+      environment => delete_undef_values($seed_env),
+    }
+    ~> Foreman::Rake['apipie:cache:index']
   }
 }
